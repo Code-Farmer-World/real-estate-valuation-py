@@ -1,4 +1,4 @@
-# 辨識層（PDF 文字層 + 框線）
+# 辨識層（PDF 文字層、框線與 cell 網格）
 pdfplumber==0.11.10
 
 # API 層
@@ -8,6 +8,7 @@ python-multipart==0.0.32
 
 # 測試
 pytest==9.1.1
+httpx2==2.12.0          # starlette 的 TestClient 需要
 
 # 註：kernel/ 刻意零依賴，只用標準函式庫（Decimal / json / dataclasses）。
 # 上面這些都是 parser/ 與 api/ 才需要的。

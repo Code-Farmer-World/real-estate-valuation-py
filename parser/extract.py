@@ -38,13 +38,20 @@ class Word:
         return (self.x0, self.top, self.x1, self.bottom)
 
 
+Grid = tuple[tuple[str | None, ...], ...]
+
+
 @dataclass(frozen=True)
 class Page:
-    """一頁的文字與框線。
+    """一頁的文字、框線與 cell 網格。
 
     `lines` 與 `rects` 都保留，因為兩者不能互相取代：範本表1／表4 的框線是
     line 物件（96 / 164 條），表5-2 卻一條 line 都沒有、140 個 rect——
     同一份 PDF 裡兩種畫法並存，只認 lines 會在表5-2 上完全失效。
+
+    座標與網格兩種取值方式並存是刻意的，各表自己選：
+    表4 的欄內還有子分隔線、且摘要列（合計／試算價格）與資料列排版不同，
+    用座標準；表5-2 的細項名會折成 2–3 行、值落在中間那一行，用網格準。
     """
 
     number: int
@@ -53,9 +60,16 @@ class Page:
     words: tuple[Word, ...]
     lines: tuple[dict, ...]
     rects: tuple[dict, ...]
+    grids: tuple[Grid, ...] = ()
 
     def text(self) -> str:
         return " ".join(w.text for w in self.words)
+
+    def main_grid(self) -> Grid:
+        """列數最多的那個網格，即這頁的主表。"""
+        if not self.grids:
+            raise ValueError("p%d 沒有偵測到任何表格網格" % self.number)
+        return max(self.grids, key=len)
 
 
 def load_pages(pdf_path: str | Path) -> list[Page]:
@@ -66,6 +80,9 @@ def load_pages(pdf_path: str | Path) -> list[Page]:
                 Word(w["text"], w["x0"], w["x1"], w["top"], w["bottom"])
                 for w in p.extract_words()
             )
+            grids = tuple(
+                tuple(tuple(row) for row in t.extract()) for t in p.find_tables()
+            )
             pages.append(
                 Page(
                     number=i,
@@ -74,6 +91,7 @@ def load_pages(pdf_path: str | Path) -> list[Page]:
                     words=words,
                     lines=tuple(p.lines),
                     rects=tuple(p.rects),
+                    grids=grids,
                 )
             )
     return pages
