@@ -350,14 +350,20 @@ def parse_survey_cell(raw: str) -> dict[str, Any]:
         unit = u.upper()
         break
 
-    plain = "\n".join(
-        line
-        for line in raw.split("\n")
-        if line
-        and "○" not in line
-        and "●" not in line
-        and "名稱：" not in line
-        and any("一" <= ch <= "鿿" for ch in line)
+    # 有圈選框的格子沒有「純文字填答」可言：那些不含 ○● 的行都是被排版折斷的
+    # 選項標籤碎片（「○垃圾場或掩／埋場」的下半段、「變電所或高壓／鐵塔」的下半段），
+    # 當成填答會顯示出「埋場」這種看不懂的值。這種格子的事實在 entries 裡。
+    has_checkbox = "○" in raw or "●" in raw
+    plain = (
+        ""
+        if has_checkbox
+        else "\n".join(
+            line
+            for line in raw.split("\n")
+            if line
+            and "名稱：" not in line
+            and any("一" <= ch <= "鿿" for ch in line)
+        )
     )
 
     return {

@@ -37,9 +37,13 @@ app = FastAPI(title="不動產估價案件審查 API", version="0.1.0")
 
 # 前端攔截器把「請求已發出但沒收到回應」一律記成網路錯誤，
 # CORS 沒開會表現成看不出原因的失敗，所以這條要先設對。
+#
+# 用 regex 而不是寫死 5173：vite 遇到埠被占用會自動往上找（實測掉到 5174），
+# 這時寫死的白名單會讓整個前端突然連不上，而錯誤訊息完全看不出是 CORS。
+# 這是開發用設定；上線要換成明確的來源清單。
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )

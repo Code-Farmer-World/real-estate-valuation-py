@@ -78,6 +78,9 @@ FACTOR_ROWS: tuple[tuple[str, str], ...] = (
 )
 
 _BY_NAME: dict[str, str] = {name: fid for name, fid in FACTOR_ROWS}
+# factor_id → 書表上的中文細項名。UI 要顯示它，這份對照表在後端，
+# 前端不該自己再抄一份——抄了就會有兩份會不同步的真相。
+FACTOR_LABELS: dict[str, str] = {fid: name for name, fid in FACTOR_ROWS}
 
 
 @dataclass
@@ -99,6 +102,7 @@ class Table5_2:
             "benchmark_grades": self.benchmark_grades,
             "comparables": self.comparables,
             "groups": self.groups,
+            "factor_labels": FACTOR_LABELS,
             "warnings": self.warnings,
         }
 

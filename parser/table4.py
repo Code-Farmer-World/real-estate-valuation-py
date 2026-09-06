@@ -55,6 +55,9 @@ FACTOR_ROWS: tuple[tuple[str, str, str], ...] = (
     ("25有無禁限建", "individual.admin.build_restriction", TEXT),
 )
 
+# factor_id → 表4 上的列名（含列號）。UI 顯示用，對照表留在後端。
+FACTOR_LABELS: dict[str, str] = {fid: label for label, fid, _kind in FACTOR_ROWS}
+
 
 @dataclass
 class Table4:
@@ -70,6 +73,7 @@ class Table4:
             "appraisal_base_date": self.appraisal_base_date,
             "benchmark": self.benchmark,
             "comparables": self.comparables,
+            "factor_labels": FACTOR_LABELS,
         }
 
 

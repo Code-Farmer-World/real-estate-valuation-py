@@ -236,3 +236,22 @@ def test_distance_is_not_mistaken_for_a_measurement():
     got = parse_survey_cell("名稱：金山變電所 ○本區段內 ●本區段外(距 700 M)")
     assert got["numeric"] is None
     assert got["entries"][0]["distance_m"] == 700
+
+
+def test_checkbox_cells_have_no_plain_text(parsed):
+    """有圈選框的格子不該產生「純文字填答」。
+
+    那些不含 ○● 的行都是被排版折斷的選項標籤碎片：
+    「○垃圾場或掩／埋場」的下半段是「埋場」、「變電所或高壓／鐵塔」的下半段是「鐵塔」。
+    當成填答會在畫面上顯示「埋場」這種看不懂的值，而真正的事實在 entries 裡。
+    """
+    for factor_id in (
+        "regional.special.waste",
+        "regional.special.utility",
+        "regional.pollution.environmental",
+    ):
+        assert parsed.surveys[factor_id]["text"] is None, factor_id
+
+    # 沒有圈選框的格子則必須留住填答文字。
+    assert parsed.surveys["regional.nature.drainage"]["text"] == "有排水系統不易淹水"
+    assert parsed.surveys["regional.transport.road_development"]["text"] == "已完全開發"
