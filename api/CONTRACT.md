@@ -58,11 +58,12 @@
       "status": "complete", "factor_count": 19 },
     { "ruleset_id": "jinshan_commercial_regional", "kind": "regional",
       "district": "新北市金山區", "land_use": "商業用地",
-      "status": "partial", "factor_count": 5, "expected_factor_count": 28 }
+      "status": "complete", "factor_count": 28 }
   ] }, "error": null }
 ```
 
-`status: "partial"` 必須誠實回報——前端要能顯示「這份規則集還沒補完，只有 5/28 項能算修正率」。
+`status` 必須誠實回報：`partial` 代表規則集還沒補完，前端要能顯示「只有 N/28 項
+能算修正率」，而不是讓使用者以為全部都查過了。目前兩套都是 `complete`。
 
 ### `POST /api/parse`
 
@@ -169,13 +170,16 @@ body 是 `/api/parse` 回傳的 `tables` 加上規則集選擇。
 
 ## 四、CORS
 
-只開 vite dev server 需要的來源：
+只開本機來源，但**埠號用 regex 不寫死**：
 
 ```
-allow_origins = ["http://localhost:5173", "http://127.0.0.1:5173"]
+allow_origin_regex = r"http://(localhost|127\.0\.0\.1):\d+"
 allow_methods = ["GET", "POST"]
 allow_headers = ["*"]
 ```
+
+寫死 5173 踩過一次：vite 遇到埠被占用會自動往上找（實測掉到 5174），
+這時整個前端突然連不上，而錯誤訊息完全看不出是 CORS。上線要換成明確的來源清單。
 
 前端攔截器對「請求已發出但沒收到回應」只會記成網路錯誤，
 CORS 沒開會表現成看不出原因的失敗，所以這條要先設好。
