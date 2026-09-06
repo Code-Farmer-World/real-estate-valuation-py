@@ -82,14 +82,14 @@ def test_missing_tables_returns_422(client):
 # ---------- 規則集 ----------
 
 
-def test_rulesets_report_partial_honestly(client):
+def test_rulesets_are_complete(client):
+    """兩套規則集都補完了：個別因素 19 項、區域因素 28 項。"""
     r = client.get("/api/rulesets")
     assert r.status_code == 200
     by_kind = {x["kind"]: x for x in r.json()["data"]["rulesets"]}
     assert by_kind["individual"]["factor_count"] == 19
-    # 區域因素只補到 5/28，前端要看得到這件事，不能顯示成「全部查過」。
-    assert by_kind["regional"]["status"] == "partial"
-    assert by_kind["regional"]["factor_count"] == 5
+    assert by_kind["regional"]["factor_count"] == 28
+    assert by_kind["regional"]["status"] == "complete"
 
 
 # ---------- 辨識 ----------
@@ -175,13 +175,51 @@ def test_review_of_the_official_sample_is_clean(client, parsed):
     assert data["finding_count"] == 0
 
 
-def test_review_reports_what_it_cannot_check(client, parsed):
-    """區域因素只補到 5/28，查不動的 23 項要列出來說明原因，不能靜靜跳過。"""
+def test_review_can_now_check_every_regional_factor(client, parsed):
+    """第一層完整了：28 個區域因素全部能從表1 的量測值反推等級。
+
+    這條測試守的是「查不動的項目」必須是空的。規則集一旦有細項被移除
+    或改名，這裡會立刻紅，而不是安靜地少查幾項還顯示「全部通過」。
+    """
     r = client.post("/api/review", json={"tables": parsed["tables"]})
-    skipped = r.json()["data"]["not_checkable"]
-    assert len(skipped) == 23
-    assert all(s["layer"] == "table1_internal" for s in skipped)
-    assert "5/28" in skipped[0]["reason"]
+    data = r.json()["data"]
+    assert data["not_checkable"] == []
+    assert data["verdict"] == "match"
+
+
+def test_review_catches_a_wrong_grade_in_table1(client, parsed):
+    """第一層：現場量到 18 米，表1 自己卻打成第 2 級（稍優）。
+
+    這是白話說明的「錯法一」，也是三層裡最有價值的一層——錯在源頭會一路
+    連鎖到賠償金，而人工最難抓的就是這層（得拿著尺與基準表一項一項核）。
+    區域因素基準表寫「普通：15m以上未滿20m」，所以 18m 只能是第 3 級。
+    """
+    tables = copy.deepcopy(parsed["tables"])
+    tables["表1"]["grades"]["regional.transport.main_road_width"]["grade"] = 2
+
+    r = client.post("/api/review", json={"tables": tables})
+    data = r.json()["data"]
+    assert data["verdict"] == "mismatch"
+    hits = data["layers"]["table1_internal"]
+    hit = next(h for h in hits if h["factor_id"] == "regional.transport.main_road_width")
+    assert hit["filed"]["grade"] == 2
+    assert hit["computed"]["grade"] == 3
+    assert "18" in hit["basis"]
+    assert "15m以上未滿20m" in hit["basis"]
+
+
+def test_review_explains_how_it_derived_each_value(client, parsed):
+    """取值方式要說得出來——尤其是多設施取最近這種會影響結果的判斷。"""
+    tables = copy.deepcopy(parsed["tables"])
+    tables["表1"]["grades"]["regional.special.utility"]["grade"] = 1
+
+    r = client.post("/api/review", json={"tables": tables})
+    hits = r.json()["data"]["layers"]["table1_internal"]
+    hit = next(h for h in hits if h["factor_id"] == "regional.special.utility")
+    # 變電所 700m 與儲油槽 440m，取最近的 440m → 劣
+    assert "440" in hit["basis"]
+    assert "取最近" in hit["basis"]
+    assert hit["computed"]["grade"] == 5
 
 
 def test_review_catches_a_wrong_grade_in_table5_2(client, parsed):

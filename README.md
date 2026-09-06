@@ -49,7 +49,9 @@ curl http://127.0.0.1:8000/api/health
 ```
 
 互動式文件在 <http://127.0.0.1:8000/docs>。前端把 `VITE_API_URL` 指到
-`http://localhost:8000` 即可（CORS 已開 `localhost:5173` / `127.0.0.1:5173`）。
+`http://localhost:8000` 即可——CORS 開的是 `http://localhost|127.0.0.1:任意埠`，
+因為 vite 遇到 5173 被占用會自動往上找（實測會掉到 5174），
+寫死白名單會讓前端突然連不上而且看不出原因。
 
 端點：
 
@@ -99,10 +101,10 @@ python demo.py
 
 ```powershell
 cd D:\SideProject\real-estate-valuation-py
-python -m pytest -q          # 全部：117 passed
-python -m pytest kernel -q   # 引擎  59
-python -m pytest parser -q   # 辨識  43
-python -m pytest api -q      # 介面  15
+python -m pytest -q          # 全部：151 passed
+python -m pytest kernel -q   # 引擎  90
+python -m pytest parser -q   # 辨識  44
+python -m pytest api -q      # 介面  17
 ```
 
 > 兩個子專案各有自己的 `conftest.py`。根目錄的把專案根放上 `sys.path`（提供 `parser` / `api` 套件），
@@ -138,18 +140,20 @@ paths.py         外部文件位置（VALUATION_DOC_DIR）
 
 | 項目 | 狀態 |
 |---|---|
-| 規則引擎（個別因素 19 項、分級／查表／加總／價格／尾數） | ✅ 59 測試 |
+| 規則引擎（個別因素 19 項、分級／查表／加總／價格／尾數） | ✅ |
 | 表4 辨識器 | ✅ facts 與 golden JSON 逐項相符 |
 | 表5-2 辨識器 | ✅ 28 細項 + 8 群組小計 + 總修正數 |
 | 表1 辨識器 | ✅ 28 細項的等級／級數／量測值 |
-| API（parse / compute / review / rulesets） | ✅ 15 測試，端到端 212,958 / 213,000 |
-| 審查模式三層比對 | ✅ 第二、三層完整；第一層受限於規則集 |
-| 規則引擎（區域因素 28 項） | ⚠️ 5/28，所以審查第一層只查得動 5 項 |
+| API（parse / compute / review / rulesets） | ✅ 端到端 212,958 / 213,000 |
+| 規則引擎（區域因素 28 項） | ✅ validator 0 ERROR / 0 WARN |
+| 審查模式三層比對 | ✅ 三層全部完整，官方範本逐格比對 77 格 |
 | vision 備用路徑（掃描／壞字型 PDF） | ⬜ 待做 |
 | 表6 徵收土地宗地市價估計表 | ⬜ 待做（賠償金真正的出口） |
 
-**誠實記錄**：`/api/review` 會把查不動的項目列在 `not_checkable` 並說明原因
-（目前 23 項，因為區域因素規則集只補到 5/28）。不會靜靜跳過然後顯示「全部通過」。
+**三層檢核的格數**：官方範本一案共比對 77 格——第一層 28 格（表1 的量測值 vs 所填等級）、
+第二層 28 格（表1 → 表5-2）、第三層 21 格（表4 的 19 個差異率 + 區域因素調整率 + 合計）。
+`/api/review` 會一併回報 `checked` 格數；若換一份規則集而某些細項沒有規則，
+那些項目會列在 `not_checkable` 並說明原因，不會靜靜跳過然後顯示「全部通過」。
 
 ## 五個寫程式時容易踩的坑
 
@@ -180,6 +184,18 @@ paths.py         外部文件位置（VALUATION_DOC_DIR）
 **5. 級數不一定是 5。**
 都市計畫內外、有無禁止建築、有無限制建築都是 **2 級**。
 把 5 寫死會讓這三項的等級語意整個錯掉。
+
+**6.「區段內有」不能用距離 0 表示。**
+區域因素有 9 個細項的最優級是「區段內有」而不是某個距離，而 0 也落在下一級的
+「未滿500m」裡——用 0 表示會讓最優級永遠取不到，錯誤還剛好落在「差一級」
+這種最難用眼睛看出來的地方。它是一種級距語意（`in_segment`），不是特殊數值。
+
+**7. Windows 上 uvicorn 的殘留子行程會佔著埠。**
+`uvicorn[standard]` 會開 multiprocessing 子行程；父行程被殺掉後子行程仍握著
+socket，新的 uvicorn 綁不上 8000 卻只在 log 裡留一行 `[Errno 10048]`，
+瀏覽器則表現成「`/api/review` 被 CORS 擋掉」——因為打到的是舊 process。
+用 `Get-NetTCPConnection -LocalPort 8000` 找不到擁有者時，
+改用 `Get-CimInstance Win32_Process` 找 `--multiprocessing-fork` 的那個子行程。
 
 ## 一個已知的合規缺口
 

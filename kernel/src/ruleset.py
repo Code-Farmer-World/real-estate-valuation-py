@@ -52,6 +52,9 @@ class RuleSet:
     source: dict
     factors: dict[str, Factor]
     grade_labels: dict[int, list[str]]
+    # 規則集的頂層欄位（扣掉 factors）。validator 需要 moi_cap_column 之類的
+    # 設定，但那些是「這份表怎麼被驗」的設定，不是某個細項的屬性。
+    meta: dict = field(default_factory=dict)
 
     @property
     def factor_ids(self) -> list[str]:
@@ -103,8 +106,18 @@ def load_ruleset(name_or_path: str | Path) -> RuleSet:
         source=data["source"],
         factors=factors,
         grade_labels=labels,
+        meta={k: v for k, v in data.items() if k != "factors"},
     )
 
 
-def load_moi_caps(path: str | Path = RULES_DIR / "moi_caps.json") -> dict:
+def load_moi_caps(path: str | Path | None = None, *, kind: str = "individual") -> dict:
+    """內政部最大影響範圍表。
+
+    個別因素在附件25、區域因素在附件24，兩份的欄位軸也不同：
+    附件25 分住宅／商業／工業／農業／其他 5 種用地別；
+    附件24 的商業用地還要再分高度／中度／普通／村里鄰 4 級。
+    所以分成兩個檔，由規則集的 scope.factor_kind 決定載哪一份。
+    """
+    if path is None:
+        path = RULES_DIR / ("moi_caps_regional.json" if kind == "regional" else "moi_caps.json")
     return json.loads(Path(path).read_text(encoding="utf-8"))

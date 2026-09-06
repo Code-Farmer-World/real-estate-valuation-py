@@ -14,6 +14,12 @@ from .ruleset import Factor, dec
 
 ABSENT_TOKENS = {"無", "", "-", "－", "無此設施"}
 
+# 區域因素有 9 個細項的最優級是「區段內有」而不是某個距離
+# （接近市場、公園、觀光遊憩、停車場地、站牌、百貨、金融、娛樂、展示中心）。
+# 它不能用距離 0 表示——0 也落在下一級的「未滿500m」裡，兩者會撞在一起。
+# 所以比照 absent 另立一種級距語意：帶 in_segment 的級距只接受這個標記。
+IN_SEGMENT_TOKENS = {"區段內有", "本區段內", "區段內"}
+
 
 @dataclass(frozen=True)
 class Grade:
@@ -33,6 +39,10 @@ def _is_absent(value: Any) -> bool:
     if isinstance(value, str) and value.strip() in ABSENT_TOKENS:
         return True
     return False
+
+
+def _is_in_segment(value: Any) -> bool:
+    return isinstance(value, str) and value.strip() in IN_SEGMENT_TOKENS
 
 
 def _band_contains(band: dict, v: Decimal) -> bool:
@@ -76,6 +86,19 @@ def _classify_numeric(factor: Factor, value: Any) -> Grade:
     c = factor.classifier
     bands = c["bands"]
 
+    if _is_in_segment(value):
+        for b in bands:
+            if b.get("in_segment"):
+                return Grade(
+                    factor.factor_id, b["grade"], factor.label_of(b["grade"]),
+                    f"值為「區段內有」→ 第{b['grade']}級",
+                    factor.source_page,
+                )
+        raise ValueError(
+            f"{factor.factor_id}（{factor.label}）: 值為「區段內有」，"
+            f"但級距條文沒有這一級。請確認是否誤用了距離型細項。"
+        )
+
     if _is_absent(value):
         for b in bands:
             if b.get("absent"):
@@ -90,7 +113,18 @@ def _classify_numeric(factor: Factor, value: Any) -> Grade:
             f"此為已知待確認事項，需人工判定或補充規則。"
         )
 
-    v = dec(value)
+    try:
+        v = dec(value)
+    except (ArithmeticError, TypeError) as e:
+        # Decimal 對無法解析的字串丟的是 InvalidOperation（ArithmeticError 的子類），
+        # 不是 ValueError，呼叫端的 except ValueError 接不住，會一路變成 500。
+        # 這裡轉成與其他判級失敗一致的 ValueError，並說清楚收到了什麼。
+        raise ValueError(
+            f"{factor.factor_id}（{factor.label}）: 這是數值型細項，"
+            f"但收到無法解析為數字的值 {value!r}。"
+            f"請確認表1 該格的填答是否被誤讀。"
+        ) from e
+
     for b in bands:
         if "or_ranges" in b:
             if any(_band_contains(r, v) for r in b["or_ranges"]):

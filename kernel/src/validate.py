@@ -41,6 +41,10 @@ def _check_bands(f: Factor) -> list[Finding]:
     for b in c["bands"]:
         ranges = b.get("or_ranges", [b])
         for r in ranges:
+            # 純標記型級距（in_segment）沒有 min/max，不參與連續性檢查。
+            # 把它當成 -∞~+∞ 會與每一級都重疊，發出一整排假的 BAND_OVERLAP。
+            if r.get("min") is None and r.get("max") is None:
+                continue
             lo = dec(r["min"]) if r.get("min") is not None else NEG
             hi = dec(r["max"]) if r.get("max") is not None else POS
             if lo >= hi:
@@ -133,8 +137,12 @@ def _check_moi_cap(f: Factor, land_use: str, caps: dict) -> list[Finding]:
 
 
 def check_ruleset(rs: RuleSet, *, moi_caps: dict | None = None) -> list[Finding]:
-    caps = moi_caps if moi_caps is not None else load_moi_caps()
-    land_use = rs.scope.get("land_use", "")
+    kind = rs.scope.get("factor_kind", "individual")
+    caps = moi_caps if moi_caps is not None else load_moi_caps(kind=kind)
+
+    # 區域因素的上限欄不是用地別，而是商業用地的四個細分級（高度／中度／
+    # 普通／村里鄰）。這個歸類不在基準表上，由規則集自己宣告並說明理由。
+    land_use = rs.meta.get("moi_cap_column") or rs.scope.get("land_use", "")
 
     findings: list[Finding] = []
     for f in rs.factors.values():
