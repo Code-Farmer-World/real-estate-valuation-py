@@ -1,0 +1,15 @@
+# 辨識層（PDF 文字層 + 框線）
+pdfplumber==0.11.10
+
+# API 層
+fastapi==0.141.1
+uvicorn[standard]==0.52.4
+python-multipart==0.0.32
+
+# 測試
+pytest==9.1.1
+
+# 註：kernel/ 刻意零依賴，只用標準函式庫（Decimal / json / dataclasses）。
+# 上面這些都是 parser/ 與 api/ 才需要的。
+# pdfplumber 會一併帶入 pdfminer.six、Pillow、pypdfium2；
+# pypdfium2 是之後 vision 路徑「PDF 轉影像」要用的，不必另外裝。

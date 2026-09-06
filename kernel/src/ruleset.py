@@ -1,0 +1,110 @@
+"""RuleSet 載入層。
+
+規則是資料，不是程式。Engine 只認識這裡定義的結構，
+換行政區／換用地別＝換一份 JSON，程式不動。
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from decimal import Decimal
+from pathlib import Path
+from typing import Any
+
+RULES_DIR = Path(__file__).resolve().parent.parent / "rules"
+
+
+def dec(x: Any) -> Decimal:
+    """一律經字串轉 Decimal，避免二進位浮點誤差污染修正率與價格。"""
+    if isinstance(x, Decimal):
+        return x
+    return Decimal(str(x))
+
+
+@dataclass(frozen=True)
+class Factor:
+    factor_id: str
+    label: str
+    group: str
+    grade_count: int
+    max_range: Decimal
+    matrix: dict
+    classifier: dict
+    unit: str | None = None
+    table4_row: int | None = None
+    source_page: int | None = None
+    compliance_note: str | None = None
+    raw: dict = field(default_factory=dict, repr=False)
+
+    @property
+    def grade_labels(self) -> list[str]:
+        return self._labels
+
+    def label_of(self, grade: int) -> str:
+        return self._labels[grade - 1]
+
+
+@dataclass(frozen=True)
+class RuleSet:
+    ruleset_id: str
+    scope: dict
+    source: dict
+    factors: dict[str, Factor]
+    grade_labels: dict[int, list[str]]
+
+    @property
+    def factor_ids(self) -> list[str]:
+        return list(self.factors)
+
+    def __getitem__(self, factor_id: str) -> Factor:
+        try:
+            return self.factors[factor_id]
+        except KeyError:
+            raise KeyError(f"RuleSet {self.ruleset_id} 沒有細項 {factor_id}") from None
+
+    def __len__(self) -> int:
+        return len(self.factors)
+
+
+def load_ruleset(name_or_path: str | Path) -> RuleSet:
+    path = Path(name_or_path)
+    if not path.exists():
+        path = RULES_DIR / f"{name_or_path}.json"
+    data = json.loads(path.read_text(encoding="utf-8"))
+
+    labels = {int(k): v for k, v in data["grade_labels"].items()}
+
+    factors: dict[str, Factor] = {}
+    for f in data["factors"]:
+        n = f["grade_count"]
+        if n not in labels:
+            raise ValueError(f"{f['factor_id']}: 缺少 {n} 級的 grade_labels 定義")
+        fac = Factor(
+            factor_id=f["factor_id"],
+            label=f["label"],
+            group=f.get("group", ""),
+            grade_count=n,
+            max_range=dec(f["max_range"]),
+            matrix=f["matrix"],
+            classifier=f["classifier"],
+            unit=f.get("unit"),
+            table4_row=f.get("table4_row"),
+            source_page=f.get("source_page"),
+            compliance_note=f.get("compliance_note"),
+            raw=f,
+        )
+        object.__setattr__(fac, "_labels", labels[n])
+        factors[fac.factor_id] = fac
+
+    return RuleSet(
+        ruleset_id=data["ruleset_id"],
+        scope=data["scope"],
+        source=data["source"],
+        factors=factors,
+        grade_labels=labels,
+    )
+
+
+def load_moi_caps(path: str | Path = RULES_DIR / "moi_caps.json") -> dict:
+    return json.loads(Path(path).read_text(encoding="utf-8"))

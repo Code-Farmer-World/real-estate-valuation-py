@@ -1,0 +1,134 @@
+{
+  "ruleset_id": "jinshan-commercial-regional",
+  "status": "partial",
+  "completeness": {
+    "total_factors_in_source": 28,
+    "encoded": 5,
+    "note": "Step B 補完剩餘 23 項。目前這 5 項足以鎖住 Golden Case 的區域因素單元測試，以及『同名欄位不得共用規則』的防混用測試（建蔽率70%、容積率240% 在區域判優、在個別判稍優）。"
+  },
+  "scope": {
+    "district": "新北市金山區",
+    "land_use": "商業用地",
+    "factor_kind": "regional"
+  },
+  "source": {
+    "doc": "評價基準明細表範例.pdf",
+    "title": "新北市金山區商業用地影響地價區域因素評價基準明細表",
+    "pages": [1, 2, 3, 4, 5]
+  },
+  "grade_labels": {
+    "2": ["優", "劣"],
+    "3": ["優", "普通", "劣"],
+    "5": ["優", "稍優", "普通", "稍劣", "劣"]
+  },
+  "band_semantics": "min 含、max 不含；absent=true 表示該級距條文含「或無」",
+  "moi_cap_ruleset": "附件24 影響商業用地區域因素評價基準表",
+  "factors": [
+    {
+      "factor_id": "regional.land_control.building_coverage",
+      "label": "建蔽率",
+      "group": "土地使用管制(1)",
+      "unit": "percent",
+      "grade_count": 5,
+      "max_range": 10,
+      "matrix": { "kind": "linear_step", "step": 2.5 },
+      "classifier": {
+        "type": "numeric_bands",
+        "direction": "higher_is_better",
+        "note": "與個別因素『建蔽率』級距不同：此處 60% 以上即為優。70% 在此判優、在個別判稍優。",
+        "bands": [
+          { "grade": 1, "min": 60 },
+          { "grade": 2, "min": 50, "max": 60 },
+          { "grade": 3, "min": 45, "max": 50 },
+          { "grade": 4, "min": 40, "max": 45 },
+          { "grade": 5, "max": 40 }
+        ]
+      },
+      "source_page": 1
+    },
+    {
+      "factor_id": "regional.land_control.floor_area_ratio",
+      "label": "容積率",
+      "group": "土地使用管制(1)",
+      "unit": "percent",
+      "grade_count": 5,
+      "max_range": 40,
+      "matrix": { "kind": "linear_step", "step": 10.0 },
+      "classifier": {
+        "type": "numeric_bands",
+        "direction": "higher_is_better",
+        "note": "與個別因素『容積率』級距不同：此處 240% 以上即為優。240% 在此判優、在個別判稍優。",
+        "bands": [
+          { "grade": 1, "min": 240 },
+          { "grade": 2, "min": 200, "max": 240 },
+          { "grade": 3, "min": 160, "max": 200 },
+          { "grade": 4, "min": 120, "max": 160 },
+          { "grade": 5, "max": 120 }
+        ]
+      },
+      "source_page": 1
+    },
+    {
+      "factor_id": "regional.transport.main_road_width",
+      "label": "主要道路寬度",
+      "group": "交通運輸(2)",
+      "unit": "m",
+      "grade_count": 5,
+      "max_range": 15,
+      "matrix": { "kind": "linear_step", "step": 3.75 },
+      "classifier": {
+        "type": "numeric_bands",
+        "direction": "higher_is_better",
+        "bands": [
+          { "grade": 1, "min": 30 },
+          { "grade": 2, "min": 20, "max": 30 },
+          { "grade": 3, "min": 15, "max": 20 },
+          { "grade": 4, "min": 10, "max": 15 },
+          { "grade": 5, "max": 10, "absent": true }
+        ]
+      },
+      "source_page": 2
+    },
+    {
+      "factor_id": "regional.transport.avg_road_width",
+      "label": "區段內道路平均寬度",
+      "group": "交通運輸(2)",
+      "unit": "m",
+      "grade_count": 5,
+      "max_range": 10,
+      "matrix": { "kind": "linear_step", "step": 2.5 },
+      "classifier": {
+        "type": "numeric_bands",
+        "direction": "higher_is_better",
+        "bands": [
+          { "grade": 1, "min": 20 },
+          { "grade": 2, "min": 15, "max": 20 },
+          { "grade": 3, "min": 10, "max": 15 },
+          { "grade": 4, "min": 6, "max": 10 },
+          { "grade": 5, "max": 6, "absent": true }
+        ]
+      },
+      "source_page": 2
+    },
+    {
+      "factor_id": "regional.nature.drainage",
+      "label": "排水之良否",
+      "group": "自然條件(3)",
+      "grade_count": 5,
+      "max_range": 10,
+      "matrix": { "kind": "linear_step", "step": 2.5 },
+      "classifier": {
+        "type": "ordered_category",
+        "match": "exact",
+        "categories": [
+          { "grade": 1, "values": ["排水系統完善不曾淹水"] },
+          { "grade": 2, "values": ["有排水系統不易淹水"] },
+          { "grade": 3, "values": ["有排水系統偶有淹水但排水速度快"] },
+          { "grade": 4, "values": ["有排水系統偶有淹水"] },
+          { "grade": 5, "values": ["無排水系統易淹水"] }
+        ]
+      },
+      "source_page": 3
+    }
+  ]
+}
