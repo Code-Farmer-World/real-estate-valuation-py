@@ -26,7 +26,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from .extract import Grid, Page
+from .extract import BBox, Grid, GridBoxes, Page
 from .provenance import FieldSource, Provenance
 
 LEFT = "left"
@@ -104,6 +104,24 @@ class Table1:
         }
 
 
+def _cell(boxes: GridBoxes, row: int, col: int) -> BBox | None:
+    if not 0 <= row < len(boxes) or col >= len(boxes[row]):
+        return None
+    return boxes[row][col]
+
+
+def _union(*boxes: BBox | None) -> BBox | None:
+    got = [b for b in boxes if b is not None]
+    if not got:
+        return None
+    return (
+        min(b[0] for b in got),
+        min(b[1] for b in got),
+        max(b[2] for b in got),
+        max(b[3] for b in got),
+    )
+
+
 def _clean(cell: str | None) -> str:
     """去掉排版用的空白，但**保留換行**——換行是多筆子項目的分隔。
 
@@ -127,6 +145,7 @@ def _flat(cell: str) -> str:
 
 def parse(page: Page) -> Table1:
     grid: Grid = page.main_grid()
+    boxes: GridBoxes = page.main_grid_boxes()
     rows = [tuple(_clean(c) for c in row) for row in grid]
 
     result = Table1(
@@ -152,14 +171,27 @@ def parse(page: Page) -> Table1:
         grade, count = _find_grade(rows, idx, panel, result, alias, factor_id)
         result.grades[factor_id] = {"grade": grade, "grade_count": count, "label_in_form": alias}
 
-        raw = _value_text(rows, idx, panel, alias)
+        raw, rows_used = _value_text(rows, idx, panel, alias)
         result.surveys[factor_id] = parse_survey_cell(raw)
+        # 等級與級數在書表上是相鄰的兩格，各自記一筆——併成一個 bbox 的話，
+        # 填出來的字會落在兩格中間的格線上。
+        gcol, ccol = PANELS[panel]["grade"]
+        grade_row = _grade_row(rows, idx, panel)
+        for col, value, name in ((gcol, grade, "grade"), (ccol, count, "grade_count")):
+            result.provenance.record(
+                "grades.%s.%s" % (factor_id, name),
+                FieldSource(page.number, _cell(boxes, grade_row, col), "" if value is None else str(value)),
+            )
         result.provenance.record(
-            "grades.%s" % factor_id,
-            FieldSource(page.number, None, "%s %s %s" % (grade, count, alias)),
-        )
-        result.provenance.record(
-            "surveys.%s" % factor_id, FieldSource(page.number, None, raw)
+            "surveys.%s" % factor_id,
+            FieldSource(
+                page.number,
+                # bbox 必須涵蓋所有被讀進來的列，包含延續列。只涵蓋第一列的話，
+                # 延續列的字會留在靜態層，產表時就會與填進去的值疊在一起
+                # （電業設施的變電所／瓦斯槽是分兩列畫的，實測會重複顯示）。
+                _union(*(_cell(boxes, r, c) for r in rows_used for c in PANELS[panel]["values"])),
+                raw,
+            ),
         )
 
     return result
@@ -199,6 +231,17 @@ def _find_label_row(rows: list[tuple[str, ...]], alias: str, panel: str) -> int 
     return None
 
 
+def _grade_row(rows: list[tuple[str, ...]], idx: int, panel: str) -> int:
+    """等級實際落在哪一列。跨列儲存格會把它切到相鄰列，見 `_find_grade`。"""
+    gcol, ccol = PANELS[panel]["grade"]
+    for offset in (0, 1, -1):
+        i = idx + offset
+        if 0 <= i < len(rows) and max(gcol, ccol) < len(rows[i]):
+            if rows[i][gcol].isdigit() and rows[i][ccol].isdigit():
+                return i
+    return idx
+
+
 def _find_grade(
     rows: list[tuple[str, ...]],
     idx: int,
@@ -234,7 +277,9 @@ def _find_grade(
     return (None, None)
 
 
-def _value_text(rows: list[tuple[str, ...]], idx: int, panel: str, alias: str) -> str:
+def _value_text(
+    rows: list[tuple[str, ...]], idx: int, panel: str, alias: str
+) -> tuple[str, list[int]]:
     """細項的值：標籤右側各欄，加上後續的延續列。
 
     延續列指「同面板、標籤欄空著但值欄有內容」的列——電業設施的
@@ -242,6 +287,7 @@ def _value_text(rows: list[tuple[str, ...]], idx: int, panel: str, alias: str) -
     第二個設施，而這一項的規則是**多設施取最劣**，漏一個就可能取錯。
     """
     parts: list[str] = []
+    used: list[int] = [idx]
     label_cols = PANELS[panel]["labels"]
     value_cols = PANELS[panel]["values"]
 
@@ -257,14 +303,15 @@ def _value_text(rows: list[tuple[str, ...]], idx: int, panel: str, alias: str) -
             break
     parts.append(_join_cells([head[c] for c in value_cols if c < len(head) and head[c]]))
 
-    for row in rows[idx + 1:]:
+    for offset, row in enumerate(rows[idx + 1:], start=idx + 1):
         has_label = any(c < len(row) and row[c] for c in label_cols)
         values = [row[c] for c in value_cols if c < len(row) and row[c]]
         if has_label or not values:
             break
         parts.append(_join_cells(values))
+        used.append(offset)
 
-    return "\n".join(p for p in parts if p)
+    return "\n".join(p for p in parts if p), used
 
 
 def _join_cells(cells: list[str]) -> str:

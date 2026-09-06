@@ -62,6 +62,8 @@ curl http://127.0.0.1:8000/api/health
 | POST | `/api/parse` | 上傳查估書表 PDF → 三張表的辨識結果 + provenance |
 | POST | `/api/compute` | 依規則集重算表4 全鏈路 + 依據鏈 |
 | POST | `/api/review` | 審查模式：三層逐格比對 + 賠償金差額 |
+| POST | `/api/forms` | **產出三張填好的官方書表 PDF**，回傳下載連結 |
+| GET | `/api/forms/{token}/{filename}` | 下載產出的書表（回傳 PDF 本身，不走信封） |
 
 **回應格式是固定的信封** `{"data": …, "error": …}`，二擇一，錯誤回應也一樣。
 這是配合前端既有的 `axiosService.ts` 攔截器，完整契約見 [api/CONTRACT.md](api/CONTRACT.md)。
@@ -85,7 +87,22 @@ p6  （非書表：圖或其他）
 python -m parser.cli "..\real-estate-valuation-doc\查估書表範本.pdf" 表4 --provenance
 ```
 
-### 3. 規則引擎重現官方答案
+### 3. 產出三張填好的官方書表
+
+```powershell
+python -m pdfform.cli "..eal-estate-valuation-doc\查估書表範本.pdf" out
+```
+
+```
+表1     out	able1-survey.pdf（124 KB）
+表5-2   out	able5_2-regional.pdf（94 KB）
+表4     out	able4-comparison.pdf（105 KB）
+```
+
+版面不是自己畫的：框線是向量物件、靜態欄位名是文字，兩者都從官方書表抽出來，
+只有「值」那些格子換成引擎算出來的內容。詳見 `pdfform/template.py`。
+
+### 4. 規則引擎重現官方答案
 
 ```powershell
 cd kernel
@@ -97,14 +114,15 @@ python demo.py
 試算價格 212,958      比準地比較價格 212,958      比準地地價 213,000
 ```
 
-### 4. 測試
+### 5. 測試
 
 ```powershell
 cd D:\SideProject\real-estate-valuation-py
-python -m pytest -q          # 全部：151 passed
+python -m pytest -q          # 全部：163 passed
 python -m pytest kernel -q   # 引擎  90
 python -m pytest parser -q   # 辨識  44
-python -m pytest api -q      # 介面  17
+python -m pytest api -q      # 介面  20
+python -m pytest pdfform -q  # 產表   9
 ```
 
 > 兩個子專案各有自己的 `conftest.py`。根目錄的把專案根放上 `sys.path`（提供 `parser` / `api` 套件），
@@ -127,6 +145,12 @@ parser/          書表辨識層
   provenance.py  欄位級來源記錄
   golden/        表5-2 的期望值 fixture
   cli.py         命令列入口
+pdfform/         產出填好的官方書表 PDF
+  template.py    從官方書表抽出版面（框線、靜態欄位名、可填格子）
+  fill.py        決定每一格填什麼（輸入照抄、該算的一律重算）
+  render.py      畫成 PDF
+  forms.py       辨識 → 計算 → 產表 一次做完
+  cli.py         命令列入口
 api/             FastAPI 薄殼
   main.py        端點
   envelope.py    回應信封與錯誤改寫
@@ -147,6 +171,7 @@ paths.py         外部文件位置（VALUATION_DOC_DIR）
 | API（parse / compute / review / rulesets） | ✅ 端到端 212,958 / 213,000 |
 | 規則引擎（區域因素 28 項） | ✅ validator 0 ERROR / 0 WARN |
 | 審查模式三層比對 | ✅ 三層全部完整，官方範本逐格比對 77 格 |
+| 產出三張填好的官方書表 PDF | ✅ 往返測試：產出的 PDF 再辨識一次，值與官方答案相同 |
 | vision 備用路徑（掃描／壞字型 PDF） | ⬜ 待做 |
 | 表6 徵收土地宗地市價估計表 | ⬜ 待做（賠償金真正的出口） |
 
@@ -190,7 +215,18 @@ paths.py         外部文件位置（VALUATION_DOC_DIR）
 「未滿500m」裡——用 0 表示會讓最優級永遠取不到，錯誤還剛好落在「差一級」
 這種最難用眼睛看出來的地方。它是一種級距語意（`in_segment`），不是特殊數值。
 
-**7. Windows 上 uvicorn 的殘留子行程會佔著埠。**
+**7. 重繪書表時，靜態文字要畫在「基線」而不是 bbox 底部。**
+用 bbox 底部畫，整頁會下移約 2pt，而且不同字級的位移量不同——
+「(元/M²)」的上標 2 會脫離本文，讓辨識器再也找不到那個欄位標籤。
+基線在 pdfplumber 的 char `matrix` 平移項裡。
+
+**8. 字寬會因字型而異，辨識器不能假設標籤剛好是一個 word。**
+原檔的標楷體子集把 `M` 畫成全形（6.83pt），系統字型是半形（3.84pt），
+於是 `M` 與上標 `2` 之間多出 3.0pt 空隙，正好踩到 pdfplumber 切詞的容差，
+標籤被切成兩個 word。修的是辨識器（`find_label` 會把同一列相鄰的 word 接起來比對），
+不是遷就渲染——換一家機關產的 PDF 一樣會遇到。
+
+**9. Windows 上 uvicorn 的殘留子行程會佔著埠。**
 `uvicorn[standard]` 會開 multiprocessing 子行程；父行程被殺掉後子行程仍握著
 socket，新的 uvicorn 綁不上 8000 卻只在 log 裡留一行 `[Errno 10048]`，
 瀏覽器則表現成「`/api/review` 被 CORS 擋掉」——因為打到的是舊 process。

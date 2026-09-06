@@ -142,6 +142,31 @@ body 是 `/api/parse` 回傳的 `tables` 加上規則集選擇。
 三層對應手冊審查重點第 vi、vii 項（`土地徵收補償市價查估作業手冊` 印刷頁 11–13）。
 `verdict` 取 `"match"` / `"mismatch"`。
 
+### `POST /api/forms`
+
+`multipart/form-data`，欄位 `file`（PDF）。產出三張**填好的**官方格式書表。
+
+```json
+{ "data": {
+    "id": "ddcbe526206b4c519f0b3fab91a31c3b",
+    "files": [
+      { "table": "表1", "filename": "table1-survey.pdf", "size": 126841,
+        "link": "/api/forms/ddcbe.../table1-survey.pdf" }
+    ]
+  }, "error": null }
+```
+
+回傳**檔案清單與連結**而不是檔案本身：信封規定 body 必須是 `{data, error}`，
+二進位塞不進去。這個形狀比照前端既有的 `UploadedResponse`（id / link / updatedAt）。
+
+### `GET /api/forms/{token}/{filename}`
+
+下載產出的書表。**這是唯一不套信封的端點**——回傳 `application/pdf` 本身。
+檔案下載本來就不適用 JSON 信封，前端也是用 `link` 直接開，不經過攔截器。
+
+產出的檔案暫存在系統暫存目錄，服務重啟即消失。書表是衍生物不是資料，
+重跑一次就有；留著反而要處理保存期限與個資。
+
 ## 四、CORS
 
 只開 vite dev server 需要的來源：

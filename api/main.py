@@ -12,20 +12,26 @@ demo 的主論述是「每個數字都能指回官方文件」，一旦 API 層�
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
+import uuid
 from pathlib import Path
 from typing import Any
 
 from fastapi import Body, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 import paths
 from parser import table1, table4, table5_2
 from parser.detect import detect_table
 from parser.extract import load_pages
 
+from pdfform.fill import FORM_CODES
+from pdfform.forms import FILE_STEMS, build_forms
+
 from .envelope import install_error_handlers, ok
-from .kernel_api import RULES_DIR, appraise_table4, load_ruleset
+from .kernel_api import RULES_DIR, appraise_table4, classify, load_ruleset, lookup
 from .review import review
 
 PARSERS = {"表1": table1.parse, "表5-2": table5_2.parse, "表4": table4.parse}
@@ -220,6 +226,76 @@ def _load(ruleset_id: str):
         raise HTTPException(
             404, "找不到規則集 %r，可用的有：%s" % (ruleset_id, "、".join(available))
         ) from None
+
+
+# 產出的書表暫存在這裡，每次啟動清空。書表是衍生物、不是資料——
+# 重跑一次就有，沒有保存的必要，留著反而要處理保存期限與個資。
+FORMS_DIR = Path(tempfile.gettempdir()) / "valuation-forms"
+
+
+@app.post("/api/forms")
+async def generate_forms(file: UploadFile = File(...)) -> dict[str, Any]:
+    """上傳查估書表 PDF，產出三張**填好的**官方格式書表。
+
+    回傳的是檔案清單與下載連結，不是檔案本身——回應信封規定 body 必須是
+    `{data, error}`，二進位塞不進去。這與前端既有的 `UploadedResponse`
+    （id / link）形狀一致。
+    """
+    if not (file.filename or "").lower().endswith(".pdf"):
+        raise HTTPException(422, "只接受 PDF 檔，收到的是：%s" % file.filename)
+
+    token = uuid.uuid4().hex
+    work = FORMS_DIR / token
+    work.mkdir(parents=True, exist_ok=True)
+    src = work / "input.pdf"
+    src.write_bytes(await file.read())
+
+    try:
+        written = build_forms(
+            src,
+            work,
+            regional=load_ruleset(DEFAULT_REGIONAL),
+            individual=load_ruleset(DEFAULT_INDIVIDUAL),
+            appraise=appraise_table4,
+            classify=classify,
+            lookup=lookup,
+        )
+    except ValueError as e:
+        shutil.rmtree(work, ignore_errors=True)
+        raise HTTPException(400, str(e)) from None
+
+    return ok(
+        {
+            "id": token,
+            "files": [
+                {
+                    "table": code,
+                    "filename": written[code].name,
+                    "size": written[code].stat().st_size,
+                    "link": "/api/forms/%s/%s" % (token, written[code].name),
+                }
+                for code in FORM_CODES
+                if code in written
+            ],
+        }
+    )
+
+
+@app.get("/api/forms/{token}/{filename}")
+def download_form(token: str, filename: str) -> FileResponse:
+    """下載產出的書表。這支端點回傳的是 PDF 本身，不是信封——
+
+    檔案下載本來就不適用 JSON 信封，前端也是用 `link` 直接開，不走攔截器。
+    """
+    if not token.isalnum() or "/" in filename or "\\" in filename:
+        raise HTTPException(400, "路徑不合法")
+    if filename not in {"%s.pdf" % stem for stem in FILE_STEMS.values()}:
+        raise HTTPException(404, "沒有這個檔名：%s" % filename)
+
+    path = FORMS_DIR / token / filename
+    if not path.exists():
+        raise HTTPException(404, "檔案已不存在，請重新產出（產出的書表只暫存到服務重啟）")
+    return FileResponse(path, media_type="application/pdf", filename=filename)
 
 
 @app.get("/api/health")

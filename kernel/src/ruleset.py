@@ -97,7 +97,11 @@ def load_ruleset(name_or_path: str | Path) -> RuleSet:
             compliance_note=f.get("compliance_note"),
             raw=f,
         )
-        object.__setattr__(fac, "_labels", labels[n])
+        # 少數細項的等級文字與同級數的通用文字不同：二級制的「有無禁止建築」
+        # 「有無限制建築」在書表上印的是「無／有」而不是「優／劣」，而同為二級的
+        # 「都市計畫（內、外）」印的是「優／劣」。表5-2 的等級文字必須與書表一致
+        # （審查重點第 vi 項），所以允許逐細項覆寫。
+        object.__setattr__(fac, "_labels", f.get("grade_labels") or labels[n])
         factors[fac.factor_id] = fac
 
     return RuleSet(

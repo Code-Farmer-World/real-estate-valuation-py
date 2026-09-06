@@ -16,7 +16,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from .extract import Page, Word, bbox_of, find_word, words_at
+from .extract import Page, Word, bbox_of, find_label, words_at
 from .provenance import FieldSource, Provenance
 
 # 欄界判準：單一邊跨距下限。範本表4 實測欄界最小 247pt、欄內子分隔線最大 105pt。
@@ -65,6 +65,7 @@ class Table4:
     appraisal_base_date: str
     benchmark: dict[str, Any]
     comparables: list[dict[str, Any]]
+    benchmark_comparison_price: float | int | None = None
     provenance: Provenance = field(default_factory=Provenance)
 
     def to_dict(self) -> dict[str, Any]:
@@ -73,6 +74,7 @@ class Table4:
             "appraisal_base_date": self.appraisal_base_date,
             "benchmark": self.benchmark,
             "comparables": self.comparables,
+            "benchmark_comparison_price": self.benchmark_comparison_price,
             "factor_labels": FACTOR_LABELS,
         }
 
@@ -185,21 +187,26 @@ def parse_value(kind: str, words: list[Word]) -> tuple[Any, str | None]:
     raise ValueError("未知的欄位型別 %r" % kind)
 
 
+_TRAILING_DISTANCE_RE = re.compile(r"(-?[\d,]+(?:\.\d+)?)\s*M?\s*$", re.IGNORECASE)
+
+
 def _parse_named_distance(texts: list[str]) -> tuple[Any, str]:
     """`中山路 18 M` → (18, "中山路 18M")。
 
-    距離是最後一個數字，名稱是它前面的部分。不假設一定有單位「M」，
-    因為同一欄在不同案件可能只填數字。
+    距離是末尾的數字，名稱是它前面的部分。不能靠「哪一個 word 剛好是純數字」
+    來找——那取決於產生 PDF 的軟體怎麼排字：官方範本把它排成三個 word
+    （`中山路` `18` `M`），我們自己重繪的同一格卻是 `中山路` `18M` 兩個。
+    所以先接成一串再從尾端取數字，兩種寫法都吃得下。
+
+    也不假設一定有單位「M」，因為同一欄在不同案件可能只填數字。
     """
-    idx = max(
-        (i for i, t in enumerate(texts) if _NUM_RE.match(t)),
-        default=None,
-    )
-    if idx is None:
+    joined = "".join(texts)
+    m = _TRAILING_DISTANCE_RE.search(joined)
+    if m is None:
         raise ValueError("名稱＋距離欄找不到數字：%r" % texts)
-    value = _to_number(texts[idx])
-    name = "".join(texts[:idx])
-    return (value, "%s %sM" % (name, texts[idx]) if name else "%sM" % texts[idx])
+    value = _to_number(m.group(1))
+    name = joined[: m.start()].strip()
+    return (value, "%s %sM" % (name, m.group(1)) if name else "%sM" % m.group(1))
 
 
 # ---------- 主流程 ----------
@@ -211,7 +218,7 @@ def parse(page: Page) -> Table4:
     prov = Provenance()
 
     def row_y(label: str) -> float:
-        return find_word(words, label, (0, LABEL_X_MAX)).y_center
+        return find_label(words, label, (0, LABEL_X_MAX)).y_center
 
     def cell(x_range: tuple[float, float], y: float) -> list[Word]:
         return words_at(words, x_range, y)
@@ -243,7 +250,9 @@ def parse(page: Page) -> Table4:
     for i, (cond, diff) in enumerate(cols.comparables, start=1):
         if not cell(cond, y0):
             continue  # 版面固定留 3 件，未填的直接跳過
-        comparables.append(_parse_comparable(i, cond, diff, y0, y_segment, take, cell, words, row_y))
+        comparables.append(
+            _parse_comparable(i, cond, diff, y0, y_segment, take, cell, words, row_y, prov, page.number)
+        )
 
     for label, factor_id, kind in FACTOR_ROWS:
         y = row_y(label)
@@ -266,16 +275,32 @@ def parse(page: Page) -> Table4:
             if filed is not None:
                 c["filed_corrections"][factor_id] = filed
 
+    # 比準地比較價格是整張表的結論，印在一個橫跨多欄的合併儲存格裡，
+    # 不屬於任何一個比較標的，所以單獨處理。
+    y_bcp = row_y("比準地比較價格")
+    bcp_words = [
+        w
+        for w in words
+        if w.x0 > LABEL_X_MAX and abs(w.y_center - y_bcp) <= 5.0 and _NUM_RE.match(w.text)
+    ]
+    benchmark_comparison_price = _to_number(bcp_words[0].text) if bcp_words else None
+    if bcp_words:
+        prov.record(
+            "benchmark_comparison_price",
+            FieldSource(page.number, bbox_of(bcp_words), bcp_words[0].text),
+        )
+
     return Table4(
         case_id=case_id,
         appraisal_base_date=base_date,
         benchmark=benchmark,
         comparables=comparables,
+        benchmark_comparison_price=benchmark_comparison_price,
         provenance=prov,
     )
 
 
-def _parse_comparable(i, cond, diff, y0, y_segment, take, cell, words, row_y) -> dict[str, Any]:
+def _parse_comparable(i, cond, diff, y0, y_segment, take, cell, words, row_y, prov, page_no) -> dict[str, Any]:
     """一個比較標的的基本資料與價格欄。個別因素各列在主流程統一填。"""
     y_price = row_y("土地正常單價")
     y_date = row_y("交易日期")
@@ -303,17 +328,26 @@ def _parse_comparable(i, cond, diff, y0, y_segment, take, cell, words, row_y) ->
     # 合計／絕對值加總／試算價格／權重都印在「條件」欄內，同一列裡混著
     # 百分比與金額，所以按「有沒有 %」分辨，不按 x 位置——那幾列的
     # 排版與個別因素各列不同，用座標會寫死三個特例。
-    total = _numbers_in(cell(cond, row_y("合計")))
-    comparable["individual_total_pct"] = total["percent"]
+    def summary(label: str, path: str, pick: str) -> Any:
+        got = cell(cond, row_y(label))
+        value = _numbers_in(got)[pick] if pick != "text" else _non_numeric(got)
+        target = [
+            w
+            for w in got
+            if (pick == "text") == (not _NUM_RE.match(w.text.rstrip("%")))
+        ]
+        if target:
+            prov.record(
+                "comparables[%d].%s" % (i, path),
+                FieldSource(page_no, bbox_of(target), " ".join(w.text for w in target)),
+            )
+        return value
 
-    row = cell(cond, row_y("調整百分率絕對值加總"))
-    comparable["abs_sum_pct"] = _numbers_in(row)["percent"]
-    comparable["similarity_label"] = _non_numeric(row)
-
-    row = cell(cond, row_y("試算價格"))
-    nums = _numbers_in(row)
-    comparable["trial_price"] = nums["plain"]
-    comparable["weight_pct"] = nums["percent"]
+    comparable["individual_total_pct"] = summary("合計", "individual_total_pct", "percent")
+    comparable["abs_sum_pct"] = summary("調整百分率絕對值加總", "abs_sum_pct", "percent")
+    comparable["similarity_label"] = summary("調整百分率絕對值加總", "similarity_label", "text")
+    comparable["trial_price"] = summary("試算價格", "trial_price", "plain")
+    comparable["weight_pct"] = summary("試算價格", "weight_pct", "percent")
 
     return comparable
 

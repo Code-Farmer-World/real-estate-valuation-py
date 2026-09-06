@@ -273,3 +273,40 @@ def test_review_reports_price_impact(client, parsed):
     assert impact["computed"] == 212958
     assert impact["diff_per_sqm"] == 0
     assert impact["benchmark_land_price"] == 213000
+
+
+# ---------- 產表 ----------
+
+
+def test_forms_endpoint_returns_three_downloadable_files(client):
+    """官方要的最終成果：三張填好的書表 PDF。
+
+    回傳的是檔案清單與下載連結而不是檔案本身——信封規定 body 必須是
+    `{data, error}`，二進位塞不進去。形狀比照前端既有的 UploadedResponse。
+    """
+    with open(paths.require(paths.SAMPLE_FORMS_PDF), "rb") as f:
+        r = client.post("/api/forms", files={"file": ("a.pdf", f, "application/pdf")})
+    assert r.status_code == 200, r.text
+    _envelope(r.json())
+
+    data = r.json()["data"]
+    assert [x["table"] for x in data["files"]] == ["表1", "表5-2", "表4"]
+
+    for item in data["files"]:
+        got = client.get(item["link"])
+        assert got.status_code == 200, item["link"]
+        assert got.headers["content-type"] == "application/pdf"
+        assert got.content.startswith(b"%PDF")
+        assert len(got.content) > 10_000
+
+
+def test_forms_rejects_non_pdf(client):
+    r = client.post("/api/forms", files={"file": ("x.txt", b"hi", "text/plain")})
+    assert r.status_code == 422
+    _envelope(r.json())
+
+
+def test_form_download_rejects_unknown_filename(client):
+    """下載端點只認得我們自己產出的那三個檔名，擋掉路徑穿越。"""
+    r = client.get("/api/forms/deadbeef/../../etc/passwd")
+    assert r.status_code in (400, 404)

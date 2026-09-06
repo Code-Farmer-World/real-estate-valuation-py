@@ -14,12 +14,31 @@
   "source": {
     "doc": "評價基準明細表範例.pdf",
     "title": "新北市金山區商業用地影響地價區域因素評價基準明細表",
-    "pages": [1, 2, 3, 4, 5]
+    "pages": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ]
   },
   "grade_labels": {
-    "2": ["優", "劣"],
-    "3": ["優", "普通", "劣"],
-    "5": ["優", "稍優", "普通", "稍劣", "劣"]
+    "2": [
+      "優",
+      "劣"
+    ],
+    "3": [
+      "優",
+      "普通",
+      "劣"
+    ],
+    "5": [
+      "優",
+      "稍優",
+      "普通",
+      "稍劣",
+      "劣"
+    ]
   },
   "band_semantics": "min 含、max 不含；absent=true 表示該級距條文含「或無」；in_segment=true 表示該級為「區段內有」，只接受區段內標記、不接受距離（距離 0 會與下一級的「未滿500m」相撞）",
   "moi_cap_ruleset": "附件24 影響商業用地區域因素評價基準表",
@@ -32,13 +51,26 @@
       "group": "土地使用管制(1)",
       "grade_count": 2,
       "max_range": 20,
-      "matrix": { "kind": "linear_step", "step": 20 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 20
+      },
       "classifier": {
         "type": "ordered_category",
         "match": "exact",
         "categories": [
-          { "grade": 1, "values": ["都市計畫內"] },
-          { "grade": 2, "values": ["都市計畫外"] }
+          {
+            "grade": 1,
+            "values": [
+              "都市計畫內"
+            ]
+          },
+          {
+            "grade": 2,
+            "values": [
+              "都市計畫外"
+            ]
+          }
         ]
       },
       "source_page": 1
@@ -49,16 +81,44 @@
       "group": "土地使用管制(1)",
       "grade_count": 5,
       "max_range": 20,
-      "matrix": { "kind": "linear_step", "step": 5 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 5
+      },
       "classifier": {
         "type": "ordered_category",
         "match": "exact",
         "categories": [
-          { "grade": 1, "values": ["第二種商業區"] },
-          { "grade": 2, "values": ["市場用地"] },
-          { "grade": 3, "values": ["第二種住宅區"] },
-          { "grade": 4, "values": ["第一種住宅區"] },
-          { "grade": 5, "values": ["其他分區"] }
+          {
+            "grade": 1,
+            "values": [
+              "第二種商業區"
+            ]
+          },
+          {
+            "grade": 2,
+            "values": [
+              "市場用地"
+            ]
+          },
+          {
+            "grade": 3,
+            "values": [
+              "第二種住宅區"
+            ]
+          },
+          {
+            "grade": 4,
+            "values": [
+              "第一種住宅區"
+            ]
+          },
+          {
+            "grade": 5,
+            "values": [
+              "其他分區"
+            ]
+          }
         ]
       },
       "source_page": 1
@@ -70,16 +130,37 @@
       "unit": "percent",
       "grade_count": 5,
       "max_range": 10,
-      "matrix": { "kind": "linear_step", "step": 2.5 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2.5
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "higher_is_better",
         "bands": [
-          { "grade": 1, "min": 60 },
-          { "grade": 2, "min": 50, "max": 60 },
-          { "grade": 3, "min": 45, "max": 50 },
-          { "grade": 4, "min": 40, "max": 45 },
-          { "grade": 5, "max": 40 }
+          {
+            "grade": 1,
+            "min": 60
+          },
+          {
+            "grade": 2,
+            "min": 50,
+            "max": 60
+          },
+          {
+            "grade": 3,
+            "min": 45,
+            "max": 50
+          },
+          {
+            "grade": 4,
+            "min": 40,
+            "max": 45
+          },
+          {
+            "grade": 5,
+            "max": 40
+          }
         ]
       },
       "source_page": 1,
@@ -92,16 +173,37 @@
       "unit": "percent",
       "grade_count": 5,
       "max_range": 40,
-      "matrix": { "kind": "linear_step", "step": 10 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 10
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "higher_is_better",
         "bands": [
-          { "grade": 1, "min": 240 },
-          { "grade": 2, "min": 200, "max": 240 },
-          { "grade": 3, "min": 160, "max": 200 },
-          { "grade": 4, "min": 120, "max": 160 },
-          { "grade": 5, "max": 120 }
+          {
+            "grade": 1,
+            "min": 240
+          },
+          {
+            "grade": 2,
+            "min": 200,
+            "max": 240
+          },
+          {
+            "grade": 3,
+            "min": 160,
+            "max": 200
+          },
+          {
+            "grade": 4,
+            "min": 120,
+            "max": 160
+          },
+          {
+            "grade": 5,
+            "max": 120
+          }
         ]
       },
       "source_page": 1,
@@ -113,17 +215,34 @@
       "group": "土地使用管制(1)",
       "grade_count": 2,
       "max_range": 40,
-      "matrix": { "kind": "linear_step", "step": 40 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 40
+      },
       "classifier": {
         "type": "ordered_category",
         "match": "exact",
         "categories": [
-          { "grade": 1, "values": ["無"] },
-          { "grade": 2, "values": ["有"] }
+          {
+            "grade": 1,
+            "values": [
+              "無"
+            ]
+          },
+          {
+            "grade": 2,
+            "values": [
+              "有"
+            ]
+          }
         ]
       },
       "source_page": 1,
-      "note": "書表上這一項的等級文字印的是「無／有」而不是「優／劣」，二級制。"
+      "note": "書表上這一項的等級文字印的是「無／有」而不是「優／劣」，二級制。",
+      "grade_labels": [
+        "無",
+        "有"
+      ]
     },
     {
       "factor_id": "regional.land_control.build_restriction",
@@ -131,18 +250,34 @@
       "group": "土地使用管制(1)",
       "grade_count": 2,
       "max_range": 40,
-      "matrix": { "kind": "linear_step", "step": 40 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 40
+      },
       "classifier": {
         "type": "ordered_category",
         "match": "exact",
         "categories": [
-          { "grade": 1, "values": ["無"] },
-          { "grade": 2, "values": ["有"] }
+          {
+            "grade": 1,
+            "values": [
+              "無"
+            ]
+          },
+          {
+            "grade": 2,
+            "values": [
+              "有"
+            ]
+          }
         ]
       },
-      "source_page": 1
+      "source_page": 1,
+      "grade_labels": [
+        "無",
+        "有"
+      ]
     },
-
     {
       "factor_id": "regional.transport.main_road_width",
       "label": "主要道路寬度",
@@ -150,16 +285,38 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 15,
-      "matrix": { "kind": "linear_step", "step": 3.75 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 3.75
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "higher_is_better",
         "bands": [
-          { "grade": 1, "min": 30 },
-          { "grade": 2, "min": 20, "max": 30 },
-          { "grade": 3, "min": 15, "max": 20 },
-          { "grade": 4, "min": 10, "max": 15 },
-          { "grade": 5, "max": 10, "absent": true }
+          {
+            "grade": 1,
+            "min": 30
+          },
+          {
+            "grade": 2,
+            "min": 20,
+            "max": 30
+          },
+          {
+            "grade": 3,
+            "min": 15,
+            "max": 20
+          },
+          {
+            "grade": 4,
+            "min": 10,
+            "max": 15
+          },
+          {
+            "grade": 5,
+            "max": 10,
+            "absent": true
+          }
         ]
       },
       "source_page": 2
@@ -171,16 +328,38 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 10,
-      "matrix": { "kind": "linear_step", "step": 2.5 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2.5
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "higher_is_better",
         "bands": [
-          { "grade": 1, "min": 20 },
-          { "grade": 2, "min": 15, "max": 20 },
-          { "grade": 3, "min": 10, "max": 15 },
-          { "grade": 4, "min": 6, "max": 10 },
-          { "grade": 5, "max": 6, "absent": true }
+          {
+            "grade": 1,
+            "min": 20
+          },
+          {
+            "grade": 2,
+            "min": 15,
+            "max": 20
+          },
+          {
+            "grade": 3,
+            "min": 10,
+            "max": 15
+          },
+          {
+            "grade": 4,
+            "min": 6,
+            "max": 10
+          },
+          {
+            "grade": 5,
+            "max": 6,
+            "absent": true
+          }
         ]
       },
       "source_page": 2
@@ -192,16 +371,37 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 10,
-      "matrix": { "kind": "linear_step", "step": 2.5 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2.5
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "nearer_is_better",
         "bands": [
-          { "grade": 1, "max": 500 },
-          { "grade": 2, "min": 500, "max": 1000 },
-          { "grade": 3, "min": 1000, "max": 2000 },
-          { "grade": 4, "min": 2000, "max": 3000 },
-          { "grade": 5, "min": 3000 }
+          {
+            "grade": 1,
+            "max": 500
+          },
+          {
+            "grade": 2,
+            "min": 500,
+            "max": 1000
+          },
+          {
+            "grade": 3,
+            "min": 1000,
+            "max": 2000
+          },
+          {
+            "grade": 4,
+            "min": 2000,
+            "max": 3000
+          },
+          {
+            "grade": 5,
+            "min": 3000
+          }
         ]
       },
       "source_page": 2,
@@ -214,21 +414,37 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 8,
-      "matrix": { "kind": "linear_step", "step": 2 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "nearer_is_better",
         "bands": [
-          { "grade": 1, "in_segment": true },
-          { "grade": 2, "max": 200 },
+          {
+            "grade": 1,
+            "in_segment": true
+          },
+          {
+            "grade": 2,
+            "max": 200
+          },
           {
             "grade": 3,
             "min": 200,
             "max": 400,
             "source_defect": "原文誤植為「200km以上未滿400m」。依同列其他級距的單位與級距連續性判定應為 200m。"
           },
-          { "grade": 4, "min": 400, "max": 700 },
-          { "grade": 5, "min": 700 }
+          {
+            "grade": 4,
+            "min": 400,
+            "max": 700
+          },
+          {
+            "grade": 5,
+            "min": 700
+          }
         ]
       },
       "source_page": 2
@@ -240,15 +456,33 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 8,
-      "matrix": { "kind": "linear_step", "step": 2 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "nearer_is_better",
         "bands": [
-          { "grade": 1, "max": 500 },
-          { "grade": 2, "min": 500, "max": 1500 },
-          { "grade": 3, "min": 1500, "max": 3000 },
-          { "grade": 4, "min": 3000, "max": 4500 },
+          {
+            "grade": 1,
+            "max": 500
+          },
+          {
+            "grade": 2,
+            "min": 500,
+            "max": 1500
+          },
+          {
+            "grade": 3,
+            "min": 1500,
+            "max": 3000
+          },
+          {
+            "grade": 4,
+            "min": 3000,
+            "max": 4500
+          },
           {
             "grade": 5,
             "min": 4500,
@@ -266,37 +500,92 @@
       "group": "交通運輸(2)",
       "grade_count": 5,
       "max_range": 10,
-      "matrix": { "kind": "linear_step", "step": 2.5 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2.5
+      },
       "classifier": {
         "type": "ordered_category",
         "match": "exact",
         "categories": [
-          { "grade": 1, "values": ["已完全開發"] },
-          { "grade": 2, "values": ["大部分已完成"] },
-          { "grade": 3, "values": ["已規劃及闢建中"] },
-          { "grade": 4, "values": ["已進行規劃"] },
-          { "grade": 5, "values": ["尚未規劃"] }
+          {
+            "grade": 1,
+            "values": [
+              "已完全開發"
+            ]
+          },
+          {
+            "grade": 2,
+            "values": [
+              "大部分已完成"
+            ]
+          },
+          {
+            "grade": 3,
+            "values": [
+              "已規劃及闢建中"
+            ]
+          },
+          {
+            "grade": 4,
+            "values": [
+              "已進行規劃"
+            ]
+          },
+          {
+            "grade": 5,
+            "values": [
+              "尚未規劃"
+            ]
+          }
         ]
       },
       "source_page": 2
     },
-
     {
       "factor_id": "regional.nature.drainage",
       "label": "排水之良否",
       "group": "自然條件(3)",
       "grade_count": 5,
       "max_range": 10,
-      "matrix": { "kind": "linear_step", "step": 2.5 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2.5
+      },
       "classifier": {
         "type": "ordered_category",
         "match": "exact",
         "categories": [
-          { "grade": 1, "values": ["排水系統完善不曾淹水"] },
-          { "grade": 2, "values": ["有排水系統不易淹水"] },
-          { "grade": 3, "values": ["有排水系統偶有淹水但排水速度快"] },
-          { "grade": 4, "values": ["有排水系統偶有淹水"] },
-          { "grade": 5, "values": ["無排水系統易淹水"] }
+          {
+            "grade": 1,
+            "values": [
+              "排水系統完善不曾淹水"
+            ]
+          },
+          {
+            "grade": 2,
+            "values": [
+              "有排水系統不易淹水"
+            ]
+          },
+          {
+            "grade": 3,
+            "values": [
+              "有排水系統偶有淹水但排水速度快"
+            ]
+          },
+          {
+            "grade": 4,
+            "values": [
+              "有排水系統偶有淹水"
+            ]
+          },
+          {
+            "grade": 5,
+            "values": [
+              "無排水系統易淹水"
+            ]
+          }
         ]
       },
       "source_page": 3
@@ -307,21 +596,48 @@
       "group": "自然條件(3)",
       "grade_count": 5,
       "max_range": 10,
-      "matrix": { "kind": "linear_step", "step": 2.5 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2.5
+      },
       "classifier": {
         "type": "ordered_category",
         "match": "exact",
         "categories": [
-          { "grade": 1, "values": ["該區地勢平坦"] },
-          { "grade": 2, "values": ["該區大部分地勢平坦"] },
-          { "grade": 3, "values": ["該區一半地勢平坦"] },
-          { "grade": 4, "values": ["該區大部分地勢高亢或低窪"] },
-          { "grade": 5, "values": ["該區全部地勢高亢或低窪"] }
+          {
+            "grade": 1,
+            "values": [
+              "該區地勢平坦"
+            ]
+          },
+          {
+            "grade": 2,
+            "values": [
+              "該區大部分地勢平坦"
+            ]
+          },
+          {
+            "grade": 3,
+            "values": [
+              "該區一半地勢平坦"
+            ]
+          },
+          {
+            "grade": 4,
+            "values": [
+              "該區大部分地勢高亢或低窪"
+            ]
+          },
+          {
+            "grade": 5,
+            "values": [
+              "該區全部地勢高亢或低窪"
+            ]
+          }
         ]
       },
       "source_page": 3
     },
-
     {
       "factor_id": "regional.public.market",
       "label": "接近市場之程度（傳統市場、超級市場、超大型購物中心）",
@@ -329,16 +645,37 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 6,
-      "matrix": { "kind": "linear_step", "step": 1.5 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 1.5
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "nearer_is_better",
         "bands": [
-          { "grade": 1, "in_segment": true },
-          { "grade": 2, "max": 500 },
-          { "grade": 3, "min": 500, "max": 1000 },
-          { "grade": 4, "min": 1000, "max": 1800 },
-          { "grade": 5, "min": 1800, "absent": true }
+          {
+            "grade": 1,
+            "in_segment": true
+          },
+          {
+            "grade": 2,
+            "max": 500
+          },
+          {
+            "grade": 3,
+            "min": 500,
+            "max": 1000
+          },
+          {
+            "grade": 4,
+            "min": 1000,
+            "max": 1800
+          },
+          {
+            "grade": 5,
+            "min": 1800,
+            "absent": true
+          }
         ]
       },
       "source_page": 3
@@ -350,16 +687,37 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 6,
-      "matrix": { "kind": "linear_step", "step": 1.5 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 1.5
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "nearer_is_better",
         "bands": [
-          { "grade": 1, "in_segment": true },
-          { "grade": 2, "max": 500 },
-          { "grade": 3, "min": 500, "max": 1000 },
-          { "grade": 4, "min": 1000, "max": 1800 },
-          { "grade": 5, "min": 1800, "absent": true }
+          {
+            "grade": 1,
+            "in_segment": true
+          },
+          {
+            "grade": 2,
+            "max": 500
+          },
+          {
+            "grade": 3,
+            "min": 500,
+            "max": 1000
+          },
+          {
+            "grade": 4,
+            "min": 1000,
+            "max": 1800
+          },
+          {
+            "grade": 5,
+            "min": 1800,
+            "absent": true
+          }
         ]
       },
       "source_page": 3
@@ -371,21 +729,38 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 3,
-      "matrix": { "kind": "linear_step", "step": 0.75 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 0.75
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "nearer_is_better",
         "bands": [
-          { "grade": 1, "in_segment": true },
-          { "grade": 2, "max": 500 },
-          { "grade": 3, "min": 500, "max": 1000 },
+          {
+            "grade": 1,
+            "in_segment": true
+          },
+          {
+            "grade": 2,
+            "max": 500
+          },
+          {
+            "grade": 3,
+            "min": 500,
+            "max": 1000
+          },
           {
             "grade": 4,
             "min": 1000,
             "max": 1500,
             "source_defect": "原文誤植為「1,000km以上未滿1,500m」。依同列其他級距的單位與級距連續性判定應為 1,000m。"
           },
-          { "grade": 5, "min": 1500, "absent": true }
+          {
+            "grade": 5,
+            "min": 1500,
+            "absent": true
+          }
         ]
       },
       "source_page": 3
@@ -397,21 +772,41 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 4,
-      "matrix": { "kind": "linear_step", "step": 1 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 1
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "nearer_is_better",
         "bands": [
-          { "grade": 1, "in_segment": true },
-          { "grade": 2, "max": 200 },
-          { "grade": 3, "min": 200, "max": 400 },
-          { "grade": 4, "min": 400, "max": 700 },
-          { "grade": 5, "min": 700, "absent": true }
+          {
+            "grade": 1,
+            "in_segment": true
+          },
+          {
+            "grade": 2,
+            "max": 200
+          },
+          {
+            "grade": 3,
+            "min": 200,
+            "max": 400
+          },
+          {
+            "grade": 4,
+            "min": 400,
+            "max": 700
+          },
+          {
+            "grade": 5,
+            "min": 700,
+            "absent": true
+          }
         ]
       },
       "source_page": 3
     },
-
     {
       "factor_id": "regional.special.utility",
       "label": "電業設施及公用氣體燃料設施之有無及接近程度",
@@ -419,7 +814,10 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 8,
-      "matrix": { "kind": "linear_step", "step": 2 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "farther_is_better",
@@ -431,10 +829,25 @@
             "inferred": true,
             "source_defect": "條文未載「或無」。此類為嫌惡設施，方向與正面設施相反：沒有設施是最好的情形，故「無」→ 優。需向地政局確認。"
           },
-          { "grade": 2, "min": 2000, "max": 3000 },
-          { "grade": 3, "min": 1000, "max": 2000 },
-          { "grade": 4, "min": 500, "max": 1000 },
-          { "grade": 5, "max": 500 }
+          {
+            "grade": 2,
+            "min": 2000,
+            "max": 3000
+          },
+          {
+            "grade": 3,
+            "min": 1000,
+            "max": 2000
+          },
+          {
+            "grade": 4,
+            "min": 500,
+            "max": 1000
+          },
+          {
+            "grade": 5,
+            "max": 500
+          }
         ]
       },
       "source_page": 4,
@@ -447,7 +860,10 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 8,
-      "matrix": { "kind": "linear_step", "step": 2 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "farther_is_better",
@@ -459,10 +875,25 @@
             "inferred": true,
             "source_defect": "條文未載「或無」，比照同組其他嫌惡設施處理：「無」→ 優。需向地政局確認。"
           },
-          { "grade": 2, "min": 2000, "max": 3000 },
-          { "grade": 3, "min": 1000, "max": 2000 },
-          { "grade": 4, "min": 500, "max": 1000 },
-          { "grade": 5, "max": 500 }
+          {
+            "grade": 2,
+            "min": 2000,
+            "max": 3000
+          },
+          {
+            "grade": 3,
+            "min": 1000,
+            "max": 2000
+          },
+          {
+            "grade": 4,
+            "min": 500,
+            "max": 1000
+          },
+          {
+            "grade": 5,
+            "max": 500
+          }
         ]
       },
       "source_page": 4,
@@ -475,7 +906,10 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 8,
-      "matrix": { "kind": "linear_step", "step": 2 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "farther_is_better",
@@ -487,10 +921,25 @@
             "inferred": true,
             "source_defect": "條文未載「或無」。Golden Case 表1 三個選項全未圈選、名稱皆填「無」，表5-2 填 1 優，據此反推「無」→ 優。需向地政局確認。"
           },
-          { "grade": 2, "min": 2000, "max": 3000 },
-          { "grade": 3, "min": 1000, "max": 2000 },
-          { "grade": 4, "min": 500, "max": 1000 },
-          { "grade": 5, "max": 500 }
+          {
+            "grade": 2,
+            "min": 2000,
+            "max": 3000
+          },
+          {
+            "grade": 3,
+            "min": 1000,
+            "max": 2000
+          },
+          {
+            "grade": 4,
+            "min": 500,
+            "max": 1000
+          },
+          {
+            "grade": 5,
+            "max": 500
+          }
         ]
       },
       "source_page": 4
@@ -502,7 +951,10 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 6,
-      "matrix": { "kind": "linear_step", "step": 1.5 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 1.5
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "farther_is_better",
@@ -514,15 +966,29 @@
             "inferred": true,
             "source_defect": "條文未載「或無」。Golden Case 表1 五個污染類型全未圈選、名稱皆填「無」，表5-2 填 1 優，據此反推「無」→ 優。需向地政局確認。"
           },
-          { "grade": 2, "min": 2000, "max": 3000 },
-          { "grade": 3, "min": 1000, "max": 2000 },
-          { "grade": 4, "min": 500, "max": 1000 },
-          { "grade": 5, "max": 500 }
+          {
+            "grade": 2,
+            "min": 2000,
+            "max": 3000
+          },
+          {
+            "grade": 3,
+            "min": 1000,
+            "max": 2000
+          },
+          {
+            "grade": 4,
+            "min": 500,
+            "max": 1000
+          },
+          {
+            "grade": 5,
+            "max": 500
+          }
         ]
       },
       "source_page": 4
     },
-
     {
       "factor_id": "regional.commerce.department_store",
       "label": "百貨公司之有無、數量、接近程度",
@@ -530,16 +996,37 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 8,
-      "matrix": { "kind": "linear_step", "step": 2 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "nearer_is_better",
         "bands": [
-          { "grade": 1, "in_segment": true },
-          { "grade": 2, "max": 500 },
-          { "grade": 3, "min": 500, "max": 1000 },
-          { "grade": 4, "min": 1000, "max": 1500 },
-          { "grade": 5, "min": 1500, "absent": true }
+          {
+            "grade": 1,
+            "in_segment": true
+          },
+          {
+            "grade": 2,
+            "max": 500
+          },
+          {
+            "grade": 3,
+            "min": 500,
+            "max": 1000
+          },
+          {
+            "grade": 4,
+            "min": 1000,
+            "max": 1500
+          },
+          {
+            "grade": 5,
+            "min": 1500,
+            "absent": true
+          }
         ]
       },
       "source_page": 5
@@ -551,16 +1038,37 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 4,
-      "matrix": { "kind": "linear_step", "step": 1 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 1
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "nearer_is_better",
         "bands": [
-          { "grade": 1, "in_segment": true },
-          { "grade": 2, "max": 500 },
-          { "grade": 3, "min": 500, "max": 1000 },
-          { "grade": 4, "min": 1000, "max": 1500 },
-          { "grade": 5, "min": 1500, "absent": true }
+          {
+            "grade": 1,
+            "in_segment": true
+          },
+          {
+            "grade": 2,
+            "max": 500
+          },
+          {
+            "grade": 3,
+            "min": 500,
+            "max": 1000
+          },
+          {
+            "grade": 4,
+            "min": 1000,
+            "max": 1500
+          },
+          {
+            "grade": 5,
+            "min": 1500,
+            "absent": true
+          }
         ]
       },
       "source_page": 5
@@ -572,16 +1080,37 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 4,
-      "matrix": { "kind": "linear_step", "step": 1 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 1
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "nearer_is_better",
         "bands": [
-          { "grade": 1, "in_segment": true },
-          { "grade": 2, "max": 500 },
-          { "grade": 3, "min": 500, "max": 1000 },
-          { "grade": 4, "min": 1000, "max": 1500 },
-          { "grade": 5, "min": 1500, "absent": true }
+          {
+            "grade": 1,
+            "in_segment": true
+          },
+          {
+            "grade": 2,
+            "max": 500
+          },
+          {
+            "grade": 3,
+            "min": 500,
+            "max": 1000
+          },
+          {
+            "grade": 4,
+            "min": 1000,
+            "max": 1500
+          },
+          {
+            "grade": 5,
+            "min": 1500,
+            "absent": true
+          }
         ]
       },
       "source_page": 5
@@ -593,16 +1122,37 @@
       "unit": "m",
       "grade_count": 5,
       "max_range": 8,
-      "matrix": { "kind": "linear_step", "step": 2 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 2
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "nearer_is_better",
         "bands": [
-          { "grade": 1, "in_segment": true },
-          { "grade": 2, "max": 500 },
-          { "grade": 3, "min": 500, "max": 1000 },
-          { "grade": 4, "min": 1000, "max": 1500 },
-          { "grade": 5, "min": 1500, "absent": true }
+          {
+            "grade": 1,
+            "in_segment": true
+          },
+          {
+            "grade": 2,
+            "max": 500
+          },
+          {
+            "grade": 3,
+            "min": 500,
+            "max": 1000
+          },
+          {
+            "grade": 4,
+            "min": 1000,
+            "max": 1500
+          },
+          {
+            "grade": 5,
+            "min": 1500,
+            "absent": true
+          }
         ]
       },
       "source_page": 5
@@ -613,16 +1163,44 @@
       "group": "工商活動(7)",
       "grade_count": 5,
       "max_range": 12,
-      "matrix": { "kind": "linear_step", "step": 3 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 3
+      },
       "classifier": {
         "type": "ordered_category",
         "match": "exact",
         "categories": [
-          { "grade": 1, "values": ["顧客通行量多"] },
-          { "grade": 2, "values": ["顧客通行量稍多"] },
-          { "grade": 3, "values": ["顧客通行量普通"] },
-          { "grade": 4, "values": ["顧客通行量較少"] },
-          { "grade": 5, "values": ["顧客通行量少"] }
+          {
+            "grade": 1,
+            "values": [
+              "顧客通行量多"
+            ]
+          },
+          {
+            "grade": 2,
+            "values": [
+              "顧客通行量稍多"
+            ]
+          },
+          {
+            "grade": 3,
+            "values": [
+              "顧客通行量普通"
+            ]
+          },
+          {
+            "grade": 4,
+            "values": [
+              "顧客通行量較少"
+            ]
+          },
+          {
+            "grade": 5,
+            "values": [
+              "顧客通行量少"
+            ]
+          }
         ]
       },
       "source_page": 5,
@@ -635,16 +1213,37 @@
       "unit": "percent",
       "grade_count": 5,
       "max_range": 12,
-      "matrix": { "kind": "linear_step", "step": 3 },
+      "matrix": {
+        "kind": "linear_step",
+        "step": 3
+      },
       "classifier": {
         "type": "numeric_bands",
         "direction": "higher_is_better",
         "bands": [
-          { "grade": 1, "min": 80 },
-          { "grade": 2, "min": 70, "max": 80 },
-          { "grade": 3, "min": 60, "max": 70 },
-          { "grade": 4, "min": 50, "max": 60 },
-          { "grade": 5, "max": 50 }
+          {
+            "grade": 1,
+            "min": 80
+          },
+          {
+            "grade": 2,
+            "min": 70,
+            "max": 80
+          },
+          {
+            "grade": 3,
+            "min": 60,
+            "max": 70
+          },
+          {
+            "grade": 4,
+            "min": 50,
+            "max": 60
+          },
+          {
+            "grade": 5,
+            "max": 50
+          }
         ]
       },
       "source_page": 5

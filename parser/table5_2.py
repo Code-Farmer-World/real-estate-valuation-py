@@ -19,7 +19,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from .extract import Grid, Page
+from .extract import BBox, Grid, GridBoxes, Page
 from .provenance import FieldSource, Provenance
 
 # 表5-2 的 13 欄：0 主要項目、1 修正細項、2-3 比準地等級（數字, 文字）、
@@ -116,6 +116,7 @@ def _clean(cell: str | None) -> str:
 
 def parse(page: Page) -> Table5_2:
     grid = page.main_grid()
+    boxes = page.main_grid_boxes()
     rows = [tuple(_clean(c) for c in row) for row in grid]
 
     header_idx = _row_index(rows, COL_GROUP, HEADER_LABEL)
@@ -142,8 +143,22 @@ def parse(page: Page) -> Table5_2:
     )
 
     _read_segments(rows, result)
-    _read_body(rows, header_idx, result, page.number)
+    _read_body(rows, boxes, header_idx, result, page.number)
     return result
+
+
+def _union(*boxes: BBox | None) -> BBox | None:
+    """把相鄰儲存格的 bbox 併起來。等級欄是「數字」「文字」兩格，
+    但它在書表上是一個欄位，填值時要當成一格處理。"""
+    got = [b for b in boxes if b is not None]
+    if not got:
+        return None
+    return (
+        min(b[0] for b in got),
+        min(b[1] for b in got),
+        max(b[2] for b in got),
+        max(b[3] for b in got),
+    )
 
 
 # ---------- 表頭 ----------
@@ -215,12 +230,17 @@ def _read_segments(rows: list[tuple[str, ...]], result: Table5_2) -> None:
 
 
 def _read_body(
-    rows: list[tuple[str, ...]], header_idx: int, result: Table5_2, page_no: int
+    rows: list[tuple[str, ...]],
+    boxes: GridBoxes,
+    header_idx: int,
+    result: Table5_2,
+    page_no: int,
 ) -> None:
     current: dict[str, Any] | None = None
     pending = ""
 
-    for row in rows[header_idx + 1:]:
+    for ridx in range(header_idx + 1, len(rows)):
+        row = rows[ridx]
         group_cell = row[COL_GROUP]
         name = row[COL_FACTOR]
 
@@ -240,10 +260,12 @@ def _read_body(
         if not name:
             continue
         if name == SUBTOTAL_LABEL:
-            _read_percent_row(row, result, current, is_total=False)
+            _read_percent_row(row, boxes[ridx] if ridx < len(boxes) else (),
+                              result, current, page_no, is_total=False)
             continue
         if name.startswith(TOTAL_PREFIX):
-            _read_percent_row(row, result, current, is_total=True)
+            _read_percent_row(row, boxes[ridx] if ridx < len(boxes) else (),
+                              result, current, page_no, is_total=True)
             continue
 
         factor_id = _BY_NAME.get(name)
@@ -258,23 +280,29 @@ def _read_body(
             continue
         if current is not None:
             current["factor_ids"].append(factor_id)
-        _read_factor_row(row, factor_id, result, page_no)
+        _read_factor_row(row, boxes[ridx] if ridx < len(boxes) else (), factor_id, result, page_no)
 
 
 def _read_factor_row(
-    row: tuple[str, ...], factor_id: str, result: Table5_2, page_no: int
+    row: tuple[str, ...],
+    row_boxes: tuple[BBox | None, ...],
+    factor_id: str,
+    result: Table5_2,
+    page_no: int,
 ) -> None:
+    def box(*cols: int) -> BBox | None:
+        return _union(*(row_boxes[c] for c in cols if c < len(row_boxes)))
+
     result.benchmark_grades[factor_id] = _grade_cell(
         row[COL_BENCHMARK_GRADE], row[COL_BENCHMARK_LABEL], factor_id, "比準地", result
     )
-    result.provenance.record(
-        "benchmark_grades.%s" % factor_id,
-        FieldSource(
-            page_no,
-            None,
-            "%s %s" % (row[COL_BENCHMARK_GRADE], row[COL_BENCHMARK_LABEL]),
-        ),
-    )
+    # 等級欄在書表上是「數字」「文字」兩格，各自記一筆——併成一格會讓填出來的
+    # 字落在格線上。
+    for col, name in ((COL_BENCHMARK_GRADE, "grade"), (COL_BENCHMARK_LABEL, "label")):
+        result.provenance.record(
+            "benchmark_grades.%s.%s" % (factor_id, name),
+            FieldSource(page_no, box(col), row[col]),
+        )
 
     for i, c in enumerate(result.comparables):
         base = COMPARABLE_COL_START + i * COMPARABLE_COL_STRIDE
@@ -286,9 +314,14 @@ def _read_factor_row(
         pct = _to_pct(row[base + 2])
         if pct is not None:
             c["filed_corrections"][factor_id] = pct
+        for col, name in ((base, "grade"), (base + 1, "label")):
+            result.provenance.record(
+                "comparables[%d].grades.%s.%s" % (i + 1, factor_id, name),
+                FieldSource(page_no, box(col), row[col]),
+            )
         result.provenance.record(
-            "comparables[%d].grades.%s" % (i + 1, factor_id),
-            FieldSource(page_no, None, "%s %s" % (row[base], row[base + 1])),
+            "comparables[%d].filed_corrections.%s" % (i + 1, factor_id),
+            FieldSource(page_no, box(base + 2), row[base + 2]),
         )
 
 
@@ -333,7 +366,12 @@ def _grade_cell(
 
 
 def _read_percent_row(
-    row: tuple[str, ...], result: Table5_2, group: dict[str, Any] | None, is_total: bool
+    row: tuple[str, ...],
+    row_boxes: tuple[BBox | None, ...],
+    result: Table5_2,
+    group: dict[str, Any] | None,
+    page_no: int,
+    is_total: bool,
 ) -> None:
     """小計／總修正數列。
 
@@ -341,16 +379,23 @@ def _read_percent_row(
     （範本實測落在比較標的1 的等級文字欄）。所以不按欄位取，
     而是取整列裡帶「％」的儲存格，依序對應各比較標的。
     """
-    values = [
-        _to_pct(cell.rstrip("％"))
-        for cell in row[COL_BENCHMARK_GRADE:]
-        if "％" in cell
+    cells = [
+        (i, cell)
+        for i, cell in enumerate(row)
+        if i >= COL_BENCHMARK_GRADE and "％" in cell
     ]
-    for c, value in zip(result.comparables, values):
+    for c, (col, cell) in zip(result.comparables, cells):
+        value = _to_pct(cell.rstrip("％"))
+        box = row_boxes[col] if col < len(row_boxes) else None
         if is_total:
             c["filed_total"] = value
+            path = "comparables[%d].filed_total" % c["index"]
         elif group is not None:
             c["filed_subtotals"][group["label"]] = value
+            path = "comparables[%d].filed_subtotals.%s" % (c["index"], group["label"])
+        else:
+            continue
+        result.provenance.record(path, FieldSource(page_no, box, cell))
 
 
 def _to_pct(text: str) -> float | int | None:

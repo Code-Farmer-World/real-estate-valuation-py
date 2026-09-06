@@ -39,6 +39,8 @@ class Word:
 
 
 Grid = tuple[tuple[str | None, ...], ...]
+BBox = tuple[float, float, float, float]
+GridBoxes = tuple[tuple[BBox | None, ...], ...]
 
 
 @dataclass(frozen=True)
@@ -61,6 +63,9 @@ class Page:
     lines: tuple[dict, ...]
     rects: tuple[dict, ...]
     grids: tuple[Grid, ...] = ()
+    # 與 grids 同形狀的每格 bbox。產出官方格式書表時要知道「值該畫在哪一格」，
+    # 只有文字是不夠的——換一個案件，值變了，格子還在原處。
+    grid_boxes: tuple[GridBoxes, ...] = ()
 
     def text(self) -> str:
         return " ".join(w.text for w in self.words)
@@ -71,6 +76,13 @@ class Page:
             raise ValueError("p%d 沒有偵測到任何表格網格" % self.number)
         return max(self.grids, key=len)
 
+    def main_grid_boxes(self) -> GridBoxes:
+        """`main_grid()` 對應的每格 bbox。"""
+        if not self.grids:
+            raise ValueError("p%d 沒有偵測到任何表格網格" % self.number)
+        idx = max(range(len(self.grids)), key=lambda i: len(self.grids[i]))
+        return self.grid_boxes[idx]
+
 
 def load_pages(pdf_path: str | Path) -> list[Page]:
     pages: list[Page] = []
@@ -80,8 +92,14 @@ def load_pages(pdf_path: str | Path) -> list[Page]:
                 Word(w["text"], w["x0"], w["x1"], w["top"], w["bottom"])
                 for w in p.extract_words()
             )
-            grids = tuple(
-                tuple(tuple(row) for row in t.extract()) for t in p.find_tables()
+            tables = p.find_tables()
+            grids = tuple(tuple(tuple(row) for row in t.extract()) for t in tables)
+            grid_boxes = tuple(
+                tuple(
+                    tuple(None if c is None else (c[0], c[1], c[2], c[3]) for c in row.cells)
+                    for row in t.rows
+                )
+                for t in tables
             )
             pages.append(
                 Page(
@@ -92,6 +110,7 @@ def load_pages(pdf_path: str | Path) -> list[Page]:
                     lines=tuple(p.lines),
                     rects=tuple(p.rects),
                     grids=grids,
+                    grid_boxes=grid_boxes,
                 )
             )
     return pages
@@ -107,6 +126,66 @@ def find_word(words: Iterable[Word], text: str, x_range: tuple[float, float] | N
     這時猜哪一個都可能錯，寧可當場失敗。
     """
     hits = [w for w in words if w.text == text and _in_x(w, x_range)]
+    if not hits:
+        raise LookupError("找不到欄位標籤：%r（x 區間 %s）" % (text, x_range))
+    if len(hits) > 1:
+        raise LookupError(
+            "欄位標籤 %r 出現 %d 次，版面判讀有歧義：%s"
+            % (text, len(hits), [(round(w.x0), round(w.top)) for w in hits])
+        )
+    return hits[0]
+
+
+def find_label(
+    words: Iterable[Word],
+    text: str,
+    x_range: tuple[float, float] | None = None,
+) -> Word:
+    """找欄位標籤，允許它被切成好幾個 word。
+
+    `find_word` 要求標籤剛好是一個 word，但那取決於產生 PDF 的軟體怎麼排字。
+    實測：官方範本的「調整至估價基準日單價(元/M²)」是一個 word，我們自己重繪的
+    同一個標籤卻被切成兩個——原檔的標楷體子集把 `M` 畫成全形（6.83pt），
+    系統字型是半形（3.84pt），中間多出 3.0pt 空隙，正好踩到切詞容差。
+
+    標籤本來就是連續的一段字，所以「把同一列相鄰的 word 接起來比對」
+    才是對的做法。回傳的 Word 是整段標籤的外接框。
+    """
+    try:
+        return find_word(words, text, x_range)
+    except LookupError:
+        pass
+
+    # 同一列的判準用「垂直範圍有重疊」而不是「中心距離夠近」：上標字
+    # （M² 的 2）本來就會往上偏，中心距離會超出任何合理容差，但它的
+    # 垂直範圍一定與本文重疊。
+    candidates = sorted(
+        (w for w in words if _in_x(w, x_range)), key=lambda w: (round(w.bottom), w.x0)
+    )
+    hits: list[Word] = []
+    for i, start in enumerate(candidates):
+        merged = ""
+        parts: list[Word] = []
+        for w in candidates[i:]:
+            overlaps = w.top < parts[-1].bottom and w.bottom > parts[-1].top if parts else True
+            if not overlaps:
+                break
+            merged += w.text
+            parts.append(w)
+            if merged == text:
+                hits.append(
+                    Word(
+                        text,
+                        min(x.x0 for x in parts),
+                        max(x.x1 for x in parts),
+                        min(x.top for x in parts),
+                        max(x.bottom for x in parts),
+                    )
+                )
+                break
+            if not text.startswith(merged):
+                break
+
     if not hits:
         raise LookupError("找不到欄位標籤：%r（x 區間 %s）" % (text, x_range))
     if len(hits) > 1:
