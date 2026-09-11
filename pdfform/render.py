@@ -22,6 +22,9 @@ FONT_PATHS = (
     r"C:/Windows/Fonts/kaiu.ttf",
     r"C:/Windows/Fonts/mingliu.ttc",
     r"/usr/share/fonts/truetype/arphic/ukai.ttc",
+    r"/Library/Fonts/Arial Unicode.ttf",
+    r"/System/Library/Fonts/STHeiti Light.ttc",
+    r"/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
 )
 
 _registered = False

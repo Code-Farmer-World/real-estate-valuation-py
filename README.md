@@ -1,12 +1,35 @@
 # real-estate-valuation-py
 
-新北市 AI 黑客松「AI 輔助不動產估價案件審查」的**後端**。三個專案分工：
+2026 新北市 AI 智慧城市黑客松「AI 輔助不動產估價案件審查」（地政局命題）的**後端**。
 
-| 專案 | 內容 |
+## 兩個 repo
+
+前後端分離，各自獨立部署，溝通只透過 HTTP。
+
+| repo | 內容 |
 |---|---|
-| `real-estate-valuation-py`（本專案） | 規則引擎 + 書表辨識 + API |
-| `real-estate-valuation-doc` | 官方文件（PDF / docx）、計畫書 `PLAN.md` |
-| `real-estate-valuation` | Vue 3 前端 |
+| **`real-estate-valuation-py`**（本專案） | 規則引擎、書表辨識、產表、API，以及 `docs/` 完整專案文件 |
+| [`real-estate-valuation`](https://github.com/MoreFoodQ/real-estate-valuation) | Vue 3 + TypeScript 前端 |
+
+## 先讀這些文件
+
+| 文件 | 內容 |
+|---|---|
+| [`docs/PROJECT_DECISIONS.md`](docs/PROJECT_DECISIONS.md) | **唯一權威來源。** 已鎖定的決策、官方硬約束、已驗證的實測數字、風險與處置、決策變更紀錄 |
+| [`docs/COMPETITION_BRIEF.md`](docs/COMPETITION_BRIEF.md) | 競賽總覽：時程、命題、評分配比、AWS 服務白名單、資源限制 |
+| [`docs/PITCH_PLAN.md`](docs/PITCH_PLAN.md) | 簡報規劃：實測數字、流程圖、demo 腳本、問答準備 |
+| [`docs/ROBUSTNESS_AUDIT.md`](docs/ROBUSTNESS_AUDIT.md) | 穩健性稽核：61 個壓力測試案例、寫死與彈性規則盤點、修正優先序 |
+
+## 內部分工
+
+| 目錄 | 內容 |
+|---|---|
+| `kernel/` | 規則引擎（純 Python、零第三方依賴） |
+| `parser/` | 書表 PDF 辨識（pdfplumber 座標抽取） |
+| `pdfform/` | 把重算結果填回官方版面，產出可交件 PDF |
+| `api/` | FastAPI 薄殼，只做 JSON 進出 |
+| `stress/` | 穩健性壓力測試 harness |
+| `docs/official/real-estate-valuation/` | 估價官方文件（PDF，不進版控） |
 
 分層規定：`kernel/` → `parser/` → `api/`，**kernel 不得反向依賴 parser / api**。
 kernel 是純邏輯、零第三方依賴；PDF 解析屬 adapter，不能滲進 domain core。
@@ -15,19 +38,33 @@ api 只做 JSON 進出與檔案接收，**沒有任何計算邏輯**——demo �
 
 ## 前置
 
-- **Python 3.14**（實測 3.14.7）
-- **官方文件目錄**。文件不在這個 repo 裡（唯讀證據、共 80MB、比賽當天會換檔），
-  預設從並存的 `../real-estate-valuation-doc` 讀取。放在別處時設環境變數：
+- **Python 3.13+**（本機以 3.13.7 測試）
+- **官方文件目錄**。預設從本專案的 `docs/official/real-estate-valuation/` 讀取
+  （定義在 `paths.py`）。放在別處時設環境變數：
 
-  ```powershell
-  $env:VALUATION_DOC_DIR = "D:\path\to\docs"
+  ```bash
+  export VALUATION_DOC_DIR="/path/to/docs/official/real-estate-valuation"
   ```
+
+  ⚠️ **官方 PDF 不在版控裡**（約 103MB，`.gitignore` 排除）。全新 clone 之後
+  `parser` 與 `pdfform` 的測試會因為找不到「查估書表範本.pdf」而失敗，需自行補檔。
+  `kernel` 與 `api` 的測試不受影響。
 
 ## 安裝
 
-```powershell
-cd D:\SideProject\real-estate-valuation-py
+macOS / Linux：
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
 python -m pip install -r requirements.txt
+```
+
+Windows（PowerShell）：
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
 ```
 
 `kernel/` 不需要任何套件就能跑；`requirements.txt` 裡的都是 `parser/` 與 `api/` 用的。
@@ -45,7 +82,7 @@ python -m uvicorn api.main:app --reload --port 8000
 
 ```powershell
 curl http://127.0.0.1:8000/api/health
-# {"data":{"status":"ok","doc_dir":"D:\\SideProject\\real-estate-valuation-doc"},"error":null}
+# {"data":{"status":"ok","doc_dir":".../docs/official/real-estate-valuation"},"error":null}
 ```
 
 互動式文件在 <http://127.0.0.1:8000/docs>。前端把 `VITE_API_URL` 指到
@@ -71,7 +108,7 @@ curl http://127.0.0.1:8000/api/health
 ### 2. 不啟動服務，直接用命令列辨識
 
 ```powershell
-python -m parser.cli "..\real-estate-valuation-doc\查估書表範本.pdf"
+python -m parser.cli "..\docs\official\real-estate-valuation\查估書表範本.pdf"
 ```
 
 ```
@@ -84,13 +121,13 @@ p6  （非書表：圖或其他）
 ```
 
 ```powershell
-python -m parser.cli "..\real-estate-valuation-doc\查估書表範本.pdf" 表4 --provenance
+python -m parser.cli "..\docs\official\real-estate-valuation\查估書表範本.pdf" 表4 --provenance
 ```
 
 ### 3. 產出三張填好的官方書表
 
 ```powershell
-python -m pdfform.cli "..eal-estate-valuation-doc\查估書表範本.pdf" out
+python -m pdfform.cli "../docs/official/real-estate-valuation/查估書表範本.pdf" out
 ```
 
 ```
