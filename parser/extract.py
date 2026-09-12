@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Iterable, Optional, Sequence, Tuple
 
 import pdfplumber
 
@@ -38,9 +38,13 @@ class Word:
         return (self.x0, self.top, self.x1, self.bottom)
 
 
-Grid = tuple[tuple[str | None, ...], ...]
-BBox = tuple[float, float, float, float]
-GridBoxes = tuple[tuple[BBox | None, ...], ...]
+# 這三個是模組層級的型別別名，賦值會在 import 時立即求值，
+# `from __future__ import annotations` 只延遲註解不延遲這裡。
+# 用 Optional[...] 而非 `str | None`，好處是 Python 3.9 也能 import
+# （3.10 才支援 X | Y 的執行期求值）。語意完全等價，3.13 上行為不變。
+Grid = Tuple[Tuple[Optional[str], ...], ...]
+BBox = Tuple[float, float, float, float]
+GridBoxes = Tuple[Tuple[Optional[BBox], ...], ...]
 
 
 @dataclass(frozen=True)
