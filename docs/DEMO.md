@@ -63,6 +63,18 @@ python -m pytest kernel/tests/test_ruleset_matches_official_pdf.py -v
 比準地量到 28 公尺判第 1 級優，比較標的量到 7 公尺判第 5 級劣，
 查基準表第 2 頁的矩陣得 +15.00%。
 
+**活版的公式是拿真實試算表引擎驗過的**。`openpyxl` 寫入公式後檔案裡不留
+計算結果，所以「Excel 打開會算出什麼」要另外驗。做法是讓 LibreOffice 重算
+一次再讀回來，24 格群組小計、3 格總修正數與表4 的 10 個計算欄，
+真實引擎算出來的值與定版完全一致，而且沒有任何一格是 `#VALUE!` 這類錯誤。
+
+```bash
+python -m pytest xlsxform/tests/test_libreoffice_recalc.py -v
+```
+
+這組也做過突變驗證：把 `SUMPRODUCT` 的範圍改成印了單位「M」的欄位，
+測試會抓到 `G30 重算後是字串 '#VALUE!'`。
+
 ### 三、每次產出都自我驗證，而且交出去的檔案有兩份
 
 十項驗證的做法是把活版 Excel 公式描述的關係，套在定版的數值上重算一次比對。
@@ -111,7 +123,7 @@ Excel 公式，局處把表4 的個別因素填進去之後下游會自動更新
 cd real-estate-valuation-py && ./scripts/verify-all.sh
 ```
 
-六步會依序印出：後端 355 passed、規則集與官方基準表逐格一致、
+六步會依序印出：後端 361 passed、規則集與官方基準表逐格一致、
 產出七個檔案、回填完整性盤點（每張表動過幾格）、
 十項自我驗證逐條列出、前端 type-check 與 16 passed 與 production build。
 
@@ -144,6 +156,15 @@ cd ../real-estate-valuation && npm run dev
 6. 切換比較標的，念出規則式產生的那段敘述
 7. 點開任一列看判級依據、矩陣查表、基準表頁碼
 8. 下載七個檔案
+
+### 交件檔案（可選，20 秒）
+
+要展示 PDF 就跑這一支，三份表各自轉出正確頁數（表3 四頁對應四個地價區段、
+表5-1 一頁、表4 一頁）：
+
+```bash
+python -m xlsxform.topdf --out ../交付
+```
 
 ### 收尾（30 秒）
 
@@ -192,7 +213,7 @@ Amazon Textract，辨識結果必須先攤給人確認再進計算。
 ## 數字速查
 
 ```
-測試        後端 355 passed（kernel 181、api 39、parser 44、pdfform 9、xlsxform 82）
+測試        後端 361 passed（kernel 181、api 39、parser 44、pdfform 9、xlsxform 88）
             前端 16 passed，Playwright 端到端 4 passed
 規則集      29 個細項、8 個群組、28 個矩陣逐格對照官方基準表、144 個門檻一致
 表5-1       116 格優劣等級、87 格修正百分比、24 格群組小計、3 格總修正數

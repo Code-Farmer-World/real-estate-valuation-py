@@ -16,6 +16,19 @@
 cd real-estate-valuation-py && ./scripts/verify-all.sh
 ```
 
+## 轉 PDF 與驗算
+
+本機裝了 LibreOffice 26.2.6（`/Applications/LibreOffice.app`，官方 dmg，
+不需要 Homebrew 也不需要 sudo）。它解決兩件事：
+
+```bash
+python -m xlsxform.topdf --out ../交付        # xlsx 轉 PDF
+```
+
+以及驗證活版的 Excel 公式在真實引擎算得對。`openpyxl` 寫入公式後檔案裡
+沒有快取值，所以在裝之前那件事完全沒驗過。
+測試在 `xlsxform/tests/test_libreoffice_recalc.py`，找不到 LibreOffice 就跳過。
+
 跑完會印一份摘要：後端測試、產出三份表、回填盤點、自我驗證、前端測試與 build。
 任何一項失敗就中止並回非零。錄影片或交接前跑這一支就夠。
 
@@ -63,7 +76,7 @@ cd real-estate-valuation-py && ./scripts/verify-all.sh
 
 ```bash
 export VALUATION_DOC_DIR="$(cd ../docs/official/real-estate-valuation && pwd)"
-.venv/bin/python -m pytest -q -p no:warnings      # 355 passed
+.venv/bin/python -m pytest -q -p no:warnings      # 361 passed
 ```
 
 官方 xlsx 範本與題目 PDF 在 `../正式題目/`。API 用 `VALUATION_TEMPLATE_DIR` 覆寫。
@@ -90,7 +103,7 @@ npx playwright test --project=chromium        # 4 passed，其中 2 支要後端
   位置在「PDF 辨識」與「敘述潤飾」，不能取代規則引擎
 - 表3 的 PDF 辨識（目前只吃 xlsx）。下一步是 Amazon Textract，
   辨識結果必須先攤給人確認
-- 沒有 xlsx 轉 PDF 的自動化，本機沒有任何轉檔工具
+（xlsx 轉 PDF 已解決，見下方「轉 PDF 與驗算」）
 - `api/main.py` 的審查模式寫死 `DEFAULT_REGIONAL = "jinshan_commercial_regional"`，
   這是唯一會安靜給錯答案的地方
 - 住宅用地的內政部上限表（附件24 第1表）未編，所以 `check_ruleset()`
