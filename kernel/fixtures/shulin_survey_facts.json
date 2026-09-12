@@ -1,0 +1,306 @@
+{
+  "facts_id": "shulin-1110901-99",
+  "case_id": "1110901-99-XXX",
+  "year_period": "1110901",
+  "appraisal_base_date": "1110901",
+  "district": "新北市樹林區",
+  "land_use": "普通住宅用地",
+  "ruleset_regional": "shulin_residential_regional",
+  "source": {
+    "doc": "正式題目/題目.pdf",
+    "note": "四張表3 分別在第 1 到 4 頁，頁序與區段編號不同步（p1=P002、p2=P003、p3=P004、p4=P001 比準地）。表5-1 在第 5 頁、表4 在第 6 頁。",
+    "extracted_at": "2026-09-12",
+    "method": "人工核對 pdfplumber 的文字與座標輸出。表3 是雙欄直排版面，extract_text 會把主要項目欄逐字打散，所以百分比類欄位改用 extract_words 的座標交叉確認（建蔽率 top≈140、容積率 top≈149、建築密度 top≈575）。"
+  },
+  "benchmark": "P001-00",
+  "comparables": [
+    "P002-00",
+    "P003-00",
+    "P004-00"
+  ],
+  "excluded_from_regional_subtotal": [
+    "regional.land_control.zoning",
+    "regional.land_control.building_coverage",
+    "regional.land_control.floor_area_ratio"
+  ],
+  "excluded_reason": "表5-1 備註欄載明「使用分區、建蔽率、容積率修正併同於比較法調查估價表宗地個別因素考量調整修正」。這三項的優劣等級照填（116 格都要填），修正百分比以 0 計並在備註欄說明已移至表4，不計入群組小計與總修正數。刻意填 0 而不留空，是為了分得出「已移轉處理」與「漏填」。",
+  "not_applicable_factors": [
+    "regional.other.other_factors"
+  ],
+  "not_applicable_reason": "題目第 5 頁的表5-1 在其他影響因素(8) 這一列已經預填「- 無」與 0.00，等級欄是「-」而不是 1 到 7 的級數，表示本案這一項不作評定。填表時照題目填等級「-」、內容「無」、修正率 0.00，不計入群組小計與總修正數。與 excluded_from_regional_subtotal 的差別在於填法：那三項填等級數字，這一項填「-」。規則集裡仍完整編碼（基準表確實有七級矩陣），只是本案不適用。",
+  "unchecked_factors_note": "13 個細項在四張表3 都是圈選未勾、距離空白（大型車站、站牌、交流道、學校、市場、公園、觀光遊憩、停車場地、服務性設施、電業設施、殯葬設施、廢棄物處理設施、環境污染）。value 記為 null 表示「無」，由各細項條文的「或無」落在哪一級決定等級：便利類在第 5 級、嫌惡類在第 1 級。樹林這份基準表的條文都有明文載「或無」，不需要像金山那樣從 Golden Case 反推。四個區段一致，所以這 13 項的修正率必為 0。",
+  "segments": {
+    "P001-00": {
+      "role": "比準地",
+      "source_page": 4,
+      "segment_range": "沿八德街以西、啟智街及未開闢計畫道路以南、啟智街187巷以東、啟智街187巷24弄以北之捷運開發區(變更前為第一種住宅區)",
+      "facts": {
+        "regional.land_control.urban_plan": "都市計畫內",
+        "regional.land_control.zoning": "第一種住宅區",
+        "regional.land_control.building_coverage": 50,
+        "regional.land_control.floor_area_ratio": 200,
+        "regional.land_control.build_prohibition": "無",
+        "regional.land_control.build_restriction": "無",
+        "regional.transport.main_road_width": 28,
+        "regional.transport.avg_road_width": 12,
+        "regional.transport.large_station": null,
+        "regional.transport.bus_stop": null,
+        "regional.transport.interchange": null,
+        "regional.transport.road_development": "大部分規劃及闢建",
+        "regional.nature.sunlight": "充分",
+        "regional.nature.view": "視野、景觀尚可",
+        "regional.nature.slope": "平均坡度未滿5度",
+        "regional.nature.drainage": "普通完善",
+        "regional.nature.terrain": "極平坦堅硬",
+        "regional.land_improvement.site_improvement": 4,
+        "regional.public.school": null,
+        "regional.public.market": null,
+        "regional.public.park": null,
+        "regional.public.tourism": null,
+        "regional.public.parking": null,
+        "regional.public.service_facility": null,
+        "regional.special.utility": null,
+        "regional.special.funeral": null,
+        "regional.special.waste": null,
+        "regional.pollution.environmental": null,
+        "regional.other.other_factors": null
+      },
+      "raw": {
+        "regional.land_control.zoning": "第一種住宅區",
+        "regional.land_control.floor_area_ratio": 260,
+        "regional.transport.main_road_width": "名稱：八德街 寬度：28M",
+        "regional.land_improvement.site_improvement": "■整平或填挖基地 ■開挖水溝 □水土保持 ■鋪築道路 ■埋設管道 □修築駁嵌"
+      },
+      "table3_only": {
+        "building_density": "60%",
+        "building_type": "透天厝、公寓",
+        "land_use_current": [
+          "商業用",
+          "住宅用"
+        ]
+      }
+    },
+    "P002-00": {
+      "role": "比較標的1",
+      "source_page": 1,
+      "segment_range": "沿樹人街以北、長壽街21巷以西、啟智街14巷以南及樹德街136巷以東之第一種住宅區",
+      "facts": {
+        "regional.land_control.urban_plan": "都市計畫內",
+        "regional.land_control.zoning": "第一種住宅區",
+        "regional.land_control.building_coverage": 50,
+        "regional.land_control.floor_area_ratio": 200,
+        "regional.land_control.build_prohibition": "無",
+        "regional.land_control.build_restriction": "無",
+        "regional.transport.main_road_width": 7,
+        "regional.transport.avg_road_width": 6,
+        "regional.transport.large_station": null,
+        "regional.transport.bus_stop": null,
+        "regional.transport.interchange": null,
+        "regional.transport.road_development": "部分規劃及闢建",
+        "regional.nature.sunlight": "充分",
+        "regional.nature.view": "視野、景觀尚可",
+        "regional.nature.slope": "平均坡度未滿5度",
+        "regional.nature.drainage": "普通完善",
+        "regional.nature.terrain": "極平坦堅硬",
+        "regional.land_improvement.site_improvement": 4,
+        "regional.public.school": null,
+        "regional.public.market": null,
+        "regional.public.park": null,
+        "regional.public.tourism": null,
+        "regional.public.parking": null,
+        "regional.public.service_facility": null,
+        "regional.special.utility": null,
+        "regional.special.funeral": null,
+        "regional.special.waste": null,
+        "regional.pollution.environmental": null,
+        "regional.other.other_factors": null
+      },
+      "raw": {
+        "regional.land_control.floor_area_ratio": 200,
+        "regional.transport.main_road_width": "名稱：樹人街 寬度：7M",
+        "regional.land_improvement.site_improvement": "■整平或填挖基地 ■開挖水溝 □水土保持 ■鋪築道路 ■埋設管道 □修築駁嵌"
+      },
+      "table3_only": {
+        "building_density": "70%",
+        "building_type": "公寓、透天",
+        "land_use_current": [
+          "住宅用"
+        ]
+      }
+    },
+    "P003-00": {
+      "role": "比較標的2",
+      "source_page": 2,
+      "segment_range": "沿東榮街以北、鎮前街411巷1弄以南、東榮街88巷以東、鎮前街367巷以西之第一種住宅區",
+      "facts": {
+        "regional.land_control.urban_plan": "都市計畫內",
+        "regional.land_control.zoning": "第一種住宅區",
+        "regional.land_control.building_coverage": 50,
+        "regional.land_control.floor_area_ratio": 200,
+        "regional.land_control.build_prohibition": "無",
+        "regional.land_control.build_restriction": "無",
+        "regional.transport.main_road_width": 10,
+        "regional.transport.avg_road_width": 7,
+        "regional.transport.large_station": null,
+        "regional.transport.bus_stop": null,
+        "regional.transport.interchange": null,
+        "regional.transport.road_development": "全部規劃及闢建",
+        "regional.nature.sunlight": "充分",
+        "regional.nature.view": "視野、景觀尚可",
+        "regional.nature.slope": "平均坡度未滿5度",
+        "regional.nature.drainage": "普通完善",
+        "regional.nature.terrain": "極平坦堅硬",
+        "regional.land_improvement.site_improvement": 4,
+        "regional.public.school": null,
+        "regional.public.market": null,
+        "regional.public.park": null,
+        "regional.public.tourism": null,
+        "regional.public.parking": null,
+        "regional.public.service_facility": null,
+        "regional.special.utility": null,
+        "regional.special.funeral": null,
+        "regional.special.waste": null,
+        "regional.pollution.environmental": null,
+        "regional.other.other_factors": null
+      },
+      "raw": {
+        "regional.land_control.floor_area_ratio": 260,
+        "regional.transport.main_road_width": "東榮街 寬度：10M（本頁「名稱：」被版面吃掉，其餘三頁都有）",
+        "regional.land_improvement.site_improvement": "■整平或填挖基地 ■開挖水溝 □水土保持 ■鋪築道路 ■埋設管道 □修築駁嵌"
+      },
+      "table3_only": {
+        "building_density": "70%",
+        "building_type": "公寓、透天",
+        "land_use_current": [
+          "住宅用"
+        ]
+      }
+    },
+    "P004-00": {
+      "role": "比較標的3",
+      "source_page": 3,
+      "segment_range": "沿潭興街以西、潭興街107巷21弄以東及以北、潭興街91巷以南之第一種住宅區",
+      "facts": {
+        "regional.land_control.urban_plan": "都市計畫內",
+        "regional.land_control.zoning": "第一種住宅區",
+        "regional.land_control.building_coverage": 50,
+        "regional.land_control.floor_area_ratio": 200,
+        "regional.land_control.build_prohibition": "無",
+        "regional.land_control.build_restriction": "無",
+        "regional.transport.main_road_width": 10,
+        "regional.transport.avg_road_width": 7,
+        "regional.transport.large_station": null,
+        "regional.transport.bus_stop": null,
+        "regional.transport.interchange": null,
+        "regional.transport.road_development": "全部規劃及闢建",
+        "regional.nature.sunlight": "充分",
+        "regional.nature.view": "視野、景觀尚可",
+        "regional.nature.slope": "平均坡度未滿5度",
+        "regional.nature.drainage": "普通完善",
+        "regional.nature.terrain": "極平坦堅硬",
+        "regional.land_improvement.site_improvement": 4,
+        "regional.public.school": null,
+        "regional.public.market": null,
+        "regional.public.park": null,
+        "regional.public.tourism": null,
+        "regional.public.parking": null,
+        "regional.public.service_facility": null,
+        "regional.special.utility": null,
+        "regional.special.funeral": null,
+        "regional.special.waste": null,
+        "regional.pollution.environmental": null,
+        "regional.other.other_factors": null
+      },
+      "raw": {
+        "regional.land_control.floor_area_ratio": 260,
+        "regional.transport.main_road_width": "名稱：潭興街 寬度：10M",
+        "regional.land_improvement.site_improvement": "■整平或填挖基地 ■開挖水溝 □水土保持 ■鋪築道路 ■埋設管道 □修築駁嵌"
+      },
+      "table3_only": {
+        "building_density": "50%",
+        "building_type": "公寓",
+        "land_use_current": [
+          "住宅用"
+        ]
+      }
+    }
+  },
+  "table4_given": {
+    "note": "題目第 6 頁的表4 已填的部分，不是我們算的。個別因素項目 7 到 25 全部空白（只有單位標記 M），題目未提供宗地個別條件資料。",
+    "case_id": "1110901-99-XXX",
+    "appraisal_base_date": "1110901",
+    "benchmark_parcel_serial": "0003",
+    "segments": {
+      "P001-00": {
+        "parcel": "新北市樹林區樹德段1415地號"
+      },
+      "P002-00": {
+        "example_no": "1",
+        "parcel": "新北市樹林區樹德段284地號",
+        "normal_unit_price": 130167,
+        "transaction_date": "110年9月14日",
+        "date_adjustment_pct": 5.96,
+        "adjusted_unit_price": 137925
+      },
+      "P003-00": {
+        "example_no": "2",
+        "parcel": "新北市樹林區太平段367、917地號",
+        "normal_unit_price": 135275,
+        "transaction_date": "111年1月11日",
+        "date_adjustment_pct": 4.09,
+        "adjusted_unit_price": 140808
+      },
+      "P004-00": {
+        "example_no": "3",
+        "parcel": "新北市樹林區文林段317地號",
+        "normal_unit_price": 170909,
+        "transaction_date": "110年10月29日",
+        "date_adjustment_pct": 5.49,
+        "adjusted_unit_price": 180292
+      }
+    },
+    "verification": "130167 × 1.0596 = 137,925；135275 × 1.0409 = 140,808；170909 × 1.0549 = 180,292。三筆都自洽，所以「調整至估價基準日單價」是題目算好的，不需要我們重算。",
+    "remarks_all_case": [
+      "1.價格日期調整係參酌新北市樹林區土地平均區段地價表(住宅區)進行調整。",
+      "2.比準地所在區段於案例蒐集期間(111年3月2日至111年9月1日間)無適當成交案例，故依土地徵收補償市價查估辦法第17條第3項規定，擴大選取範圍及案例蒐集期間至估價基準日前一年內(110年9月2日至111年9月1日)。"
+    ]
+  },
+  "bureau_verbal_rules": [
+    {
+      "rule": "容積率一律以 200% 計算",
+      "quote": "比較標的跟比準地的道路如果沒有到達八米，容積就不能到達 200 以上。這個專案內都是八米內，所以容積一律使用 200 計算。",
+      "effect": "表3 原填 P001 260%、P002 200%、P003 260%、P004 260%（已用座標核對）。facts 一律填 200，原值保留在各區段的 raw.regional.land_control.floor_area_ratio。四個同值所以修正率為 0，而且容積率本來就不計入區域因素小計。",
+      "side_benefit": "個別因素基準表的容積率那一項沒有矩陣，寫的是「容積率差異以土地開發分析法進行試算調整」，本引擎處理不了那種型態。這條指示讓四個標的同值，正好繞過。"
+    },
+    {
+      "rule": "捷運開發區用住宅區算",
+      "quote": "捷開區不用捷開區算，要用最初的住宅用地資料。",
+      "effect": "比準地 P001-00 的區段範圍寫「捷運開發區(變更前為第一種住宅區)」，使用分區欄填「第一種住宅區」。基準表裡捷運用地(聯開) 是優、住宅區是稍優，差一級。對表5-1 沒影響（使用分區已移到表4），但表4 項目 22 要填「第一種住宅區」。"
+    }
+  ],
+  "other_factors_note": "regional.other.other_factors 在題目第 5 頁的表5-1 已經預填「- 無」與 0.00，等級欄是「-」而不是 1 到 7 的級數，表示本案這一項不參與計算。facts 記為 null，填表時照題目填「-」與「無」，修正率 0.00。",
+  "expected": {
+    "note": "已驗證的期望值，用於回歸比對。個別因素以 0 計。",
+    "total_correction_pct": {
+      "P002-00": "23.50",
+      "P003-00": "14.75",
+      "P004-00": "14.75"
+    },
+    "nonzero_group": "交通運輸(2)",
+    "nonzero_group_note": "其餘七個群組四個區段等級相同，小計為 0。",
+    "trial_price": {
+      "P002-00": 170337,
+      "P003-00": 161577,
+      "P004-00": 206885
+    },
+    "abs_sum_pct": {
+      "P002-00": "23.50",
+      "P003-00": "19.75",
+      "P004-00": "19.75"
+    },
+    "abs_sum_note": "標的2 與標的3 打平在 19.75%，作業手冊 p.57 未規定打平的處置，權重為暫定值，需向局處確認。",
+    "grade_cells": 116,
+    "correction_cells": 87,
+    "subtotal_cells": 24
+  }
+}

@@ -7,7 +7,11 @@
 2. 拿正式題目的四張表3 重算，必須重現已驗證的數字。只做第 1 項不夠，那只證明
    規則集內部一致，不證明級距抄對了。
 
-已驗證的期望值（2026-09-12，來源見 docs/ 與交接紀錄）：
+案件事實一律從 kernel/fixtures/shulin_survey_facts.json 讀，不在測試裡另寫一份。
+那份 JSON 是整條鏈的唯一輸入，期望值也記在它的 expected 區塊，改動事實就會
+自動反映到這裡。
+
+已驗證的期望值（2026-09-12）：
 
     P002-00 比較標的1  總修正數 +23.50%   137,925 × 1.2350 = 170,337 元/㎡
     P003-00 比較標的2  總修正數 +14.75%   140,808 × 1.1475 = 161,577 元/㎡
@@ -16,7 +20,9 @@
 八個群組裡只有交通運輸(2) 非零，其餘七組四個區段等級相同故修正率為 0。
 """
 
+import json
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 from src.classify import classify
@@ -24,68 +30,31 @@ from src.matrix import lookup, matrix_cells
 from src.ruleset import load_ruleset
 from src.validate import check_ruleset, errors
 
-RS = load_ruleset("shulin_residential_regional")
+FACTS_PATH = Path(__file__).resolve().parent.parent / "fixtures" / "shulin_survey_facts.json"
+FACTS = json.loads(FACTS_PATH.read_text(encoding="utf-8"))
 
-# 表5-1 備註：這三項併同於表4 宗地個別因素調整，區域因素不重複調整。
-EXCLUDED = {
-    "regional.land_control.zoning",
-    "regional.land_control.building_coverage",
-    "regional.land_control.floor_area_ratio",
+RS = load_ruleset(FACTS["ruleset_regional"])
+
+BENCHMARK = FACTS["benchmark"]
+COMPARABLES = tuple(FACTS["comparables"])
+
+# 兩種不計入群組小計的情況，差別在填表時的寫法：
+#   EXCLUDED       表5-1 備註說修正併同於表4 宗地個別因素，等級照填數字
+#   NOT_APPLICABLE 題目已預填「-」與 0.00，等級欄填「-」而不是級數
+EXCLUDED = frozenset(FACTS["excluded_from_regional_subtotal"])
+NOT_APPLICABLE = frozenset(FACTS["not_applicable_factors"])
+SKIP_SUBTOTAL = EXCLUDED | NOT_APPLICABLE
+
+EXPECTED = FACTS["expected"]
+EXPECTED_TOTAL = {k: Decimal(v) for k, v in EXPECTED["total_correction_pct"].items()}
+EXPECTED_TRIAL = EXPECTED["trial_price"]
+EXPECTED_ABS_SUM = {k: Decimal(v) for k, v in EXPECTED["abs_sum_pct"].items()}
+
+ADJUSTED_PRICE = {
+    seg: d["adjusted_unit_price"]
+    for seg, d in FACTS["table4_given"]["segments"].items()
+    if "adjusted_unit_price" in d
 }
-
-# 四張表3 的實測值。四個區段只有三項不同，其餘共用。
-# 未勾選的細項以 None 表示「無」，由各細項條文的「或無」落在哪一級決定等級：
-# 便利類（車站、站牌、交流道、學校、市場、公園、觀光遊憩、停車、服務性設施）在第 5 級，
-# 嫌惡類（電業、殯葬、廢棄物、環境污染）在第 1 級。
-COMMON = {
-    "regional.land_control.urban_plan": "都市計畫內",
-    "regional.land_control.zoning": "第一種住宅區",
-    "regional.land_control.building_coverage": 50,
-    "regional.land_control.floor_area_ratio": 200,
-    "regional.land_control.build_prohibition": "無",
-    "regional.land_control.build_restriction": "無",
-    "regional.nature.sunlight": "日照充分",
-    "regional.nature.view": "景觀尚可",
-    "regional.nature.slope": "坡度未滿5度",
-    "regional.nature.drainage": "排水普通完善",
-    "regional.nature.terrain": "地勢極平坦堅硬",
-    "regional.land_improvement.site_improvement": 4,
-    "regional.transport.large_station": None,
-    "regional.transport.bus_stop": None,
-    "regional.transport.interchange": None,
-    "regional.public.school": None,
-    "regional.public.market": None,
-    "regional.public.park": None,
-    "regional.public.tourism": None,
-    "regional.public.parking": None,
-    "regional.public.service_facility": None,
-    "regional.special.utility": None,
-    "regional.special.funeral": None,
-    "regional.special.waste": None,
-    "regional.pollution.environmental": None,
-    "regional.other.other_factors": "普通",
-}
-
-# 主要道路寬度、區段內道路平均寬度、區段內道路規劃及闢建程度
-DIFF = {
-    "P001-00": (28, 12, "大部分規劃及闢建"),
-    "P002-00": (7, 6, "部分規劃及闢建"),
-    "P003-00": (10, 7, "全部規劃及闢建"),
-    "P004-00": (10, 7, "全部規劃及闢建"),
-}
-
-BENCHMARK = "P001-00"
-COMPARABLES = ("P002-00", "P003-00", "P004-00")
-
-# 表4 已給的「調整至估價基準日單價(元/M2)」，不是算出來的
-ADJUSTED_PRICE = {"P002-00": 137925, "P003-00": 140808, "P004-00": 180292}
-
-EXPECTED_TOTAL = {
-    "P002-00": Decimal("23.50"),
-    "P003-00": Decimal("14.75"),
-    "P004-00": Decimal("14.75"),
-}
-EXPECTED_TRIAL = {"P002-00": 170337, "P003-00": 161577, "P004-00": 206885}
 
 EXPECTED_GROUPS = {
     "土地使用管制(1)": 6,
@@ -99,17 +68,28 @@ EXPECTED_GROUPS = {
 }
 
 
-def _facts(seg):
-    main_w, avg_w, road_dev = DIFF[seg]
-    d = dict(COMMON)
-    d["regional.transport.main_road_width"] = main_w
-    d["regional.transport.avg_road_width"] = avg_w
-    d["regional.transport.road_development"] = road_dev
-    return d
+def _graded_factors():
+    """要判級的細項：29 項扣掉本案不適用的那些。"""
+    return [fid for fid in RS.factor_ids if fid not in NOT_APPLICABLE]
 
 
 def _grades():
-    return {seg: {fid: classify(RS[fid], _facts(seg)[fid]).grade for fid in RS.factor_ids} for seg in DIFF}
+    """{區段: {factor_id: 等級}}，不適用的細項不出現在裡面。"""
+    out = {}
+    for seg, d in FACTS["segments"].items():
+        out[seg] = {fid: classify(RS[fid], d["facts"][fid]).grade for fid in _graded_factors()}
+    return out
+
+
+def _total(seg, grades):
+    return sum(
+        lookup(RS[fid], grades[BENCHMARK][fid], grades[seg][fid]).pct
+        for fid in RS.factor_ids
+        if fid not in SKIP_SUBTOTAL
+    )
+
+
+# ---------- 規則集結構 ----------
 
 
 def test_no_structural_errors():
@@ -132,42 +112,78 @@ def test_group_distribution():
     assert got == EXPECTED_GROUPS
 
 
-def test_all_116_grade_cells_are_classifiable():
-    """29 細項 × 4 區段 = 116 格等級都要判得出來，不能有細項因為缺級距而拋錯。
+# ---------- 事實 JSON 與規則集的一致性 ----------
 
-    其中 26 個細項四個區段等級相同（修正率必為 0），但 116 格等級都要填，
-    不能留空，所以每一格都必須判得動。
+
+def test_facts_cover_every_factor():
+    """四個區段的 facts 都要涵蓋 29 個細項，多一個少一個都要被抓到。"""
+    for seg, d in FACTS["segments"].items():
+        assert set(d["facts"]) == set(RS.factor_ids), seg
+
+
+def test_grade_cell_count_is_116():
+    """29 細項 × 4 區段 = 116 格等級欄都要有內容，不能留空。
+
+    其中 112 格是判出來的等級數字，4 格是本案不適用的「-」
+    （其他影響因素，題目已預填）。26 個細項四個區段等級相同（修正率必為 0），
+    但等級欄一律要填。
     """
     grades = _grades()
-    cells = sum(len(v) for v in grades.values())
-    assert cells == 116
+    numeric = sum(len(v) for v in grades.values())
+    dash = len(NOT_APPLICABLE) * len(FACTS["segments"])
+    assert numeric == 112, numeric
+    assert dash == 4, dash
+    assert numeric + dash == 116
+
     for seg, per in grades.items():
         for fid, g in per.items():
             assert 1 <= g <= RS[fid].grade_count, f"{seg} {fid} 等級 {g} 超出範圍"
 
 
+def test_not_applicable_factor_is_not_classifiable_by_design():
+    """本案不適用的細項，事實是 null 而條文沒有對應類別，classify 應該報錯。
+
+    這是刻意的：引擎不為「沒有評定」猜一個等級。填表時填「-」，
+    那個決定記在 fixtures 的 not_applicable_factors，不是靠引擎推論。
+    """
+    assert NOT_APPLICABLE == {"regional.other.other_factors"}
+    for seg in FACTS["segments"]:
+        for fid in NOT_APPLICABLE:
+            assert FACTS["segments"][seg]["facts"][fid] is None
+            with pytest.raises(ValueError):
+                classify(RS[fid], None)
+
+
+# ---------- 重現已驗證的數字 ----------
+
+
 @pytest.mark.parametrize("seg", COMPARABLES)
 def test_total_correction_matches_verified_value(seg):
-    grades = _grades()
-    total = sum(
-        lookup(RS[fid], grades[BENCHMARK][fid], grades[seg][fid]).pct
-        for fid in RS.factor_ids
-        if fid not in EXCLUDED
-    )
-    assert total == EXPECTED_TOTAL[seg]
+    assert _total(seg, _grades()) == EXPECTED_TOTAL[seg]
 
 
 @pytest.mark.parametrize("seg", COMPARABLES)
 def test_trial_price_matches_verified_value(seg):
-    grades = _grades()
-    total = sum(
-        lookup(RS[fid], grades[BENCHMARK][fid], grades[seg][fid]).pct
-        for fid in RS.factor_ids
-        if fid not in EXCLUDED
-    )
+    total = _total(seg, _grades())
     base = Decimal(ADJUSTED_PRICE[seg])
     trial = (base * (Decimal(1) + total / Decimal(100))).quantize(Decimal("1"))
     assert int(trial) == EXPECTED_TRIAL[seg]
+
+
+@pytest.mark.parametrize("seg", COMPARABLES)
+def test_abs_sum_matches_verified_value(seg):
+    """調整百分率絕對值加總，決定比較標的權重。
+
+    標的2 與標的3 打平在 19.75%，作業手冊 p.57 沒有規定打平怎麼處理，
+    所以權重是暫定值。這裡只驗加總本身。
+    """
+    grades = _grades()
+    got = sum(
+        abs(lookup(RS[fid], grades[BENCHMARK][fid], grades[seg][fid]).pct)
+        for fid in RS.factor_ids
+        if fid not in SKIP_SUBTOTAL
+    )
+    assert got == EXPECTED_ABS_SUM[seg]
 
 
 @pytest.mark.parametrize("seg", COMPARABLES)
@@ -180,14 +196,17 @@ def test_only_transport_group_is_nonzero(seg):
     grades = _grades()
     subtotals = {}
     for fid in RS.factor_ids:
-        if fid in EXCLUDED:
+        if fid in SKIP_SUBTOTAL:
             continue
         f = RS[fid]
         subtotals[f.group] = subtotals.get(f.group, Decimal(0)) + lookup(
             f, grades[BENCHMARK][fid], grades[seg][fid]
         ).pct
     nonzero = {g: v for g, v in subtotals.items() if v != 0}
-    assert nonzero == {"交通運輸(2)": EXPECTED_TOTAL[seg]}
+    assert nonzero == {EXPECTED["nonzero_group"]: EXPECTED_TOTAL[seg]}
+
+
+# ---------- 容易抄錯的地方 ----------
 
 
 def test_other_factors_is_seven_grade_and_uses_explicit_cells():
@@ -195,7 +214,7 @@ def test_other_factors_is_seven_grade_and_uses_explicit_cells():
 
     基準表印的是 3.33／6.67／10／13.33／16.67／20，那是 20×k/6 四捨五入到小數
     第二位的結果。linear_step 3.33 會算出 6.66 而與基準表不符，所以這裡守住
-    matrix.kind 不被改回 linear_step。
+    matrix.kind 不被改回 linear_step。本案雖然不適用這一項，規則仍要正確。
     """
     f = RS["regional.other.other_factors"]
     assert f.grade_count == 7
@@ -235,3 +254,18 @@ def test_build_restriction_refuses_to_guess():
     assert classify(f, "無").grade == 1
     with pytest.raises(ValueError):
         classify(f, "有")
+
+
+def test_bureau_verbal_rule_on_floor_area_ratio_is_recorded():
+    """容積率一律用 200% 是局處口頭指示，原值必須留在 raw 裡才追溯得回去。
+
+    表3 原填 P001 260%、P002 200%、P003 260%、P004 260%（已用座標核對）。
+    facts 一律 200，所以四個區段同級、修正率 0。
+    """
+    fid = "regional.land_control.floor_area_ratio"
+    raws = {seg: d["raw"].get(fid) for seg, d in FACTS["segments"].items()}
+    assert raws == {"P001-00": 260, "P002-00": 200, "P003-00": 260, "P004-00": 260}
+    for seg, d in FACTS["segments"].items():
+        assert d["facts"][fid] == 200, seg
+    grades = _grades()
+    assert len({grades[seg][fid] for seg in FACTS["segments"]}) == 1
