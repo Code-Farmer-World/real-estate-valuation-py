@@ -99,7 +99,12 @@ def fill_table5_1(
             cell = result.grade(seg, fid)
             put(ws, f"{col}{row}", cell.text)
             counts["grades"] += 1
-            put(ws, f"{label_col}{row}", cell.label)
+            # 都市計畫與使用分區的等級文字欄填量測值（「都市計畫內」
+            # 「第一種住宅區」），其餘填優劣文字。見 layout 那份清單的說明。
+            label = cell.label
+            if fid in layout.TABLE5_1_LABEL_FROM_VALUE and cell.value is not None:
+                label = cell.value
+            put(ws, f"{label_col}{row}", label)
             counts["grade_labels"] += 1
 
     # 87 格修正百分比
