@@ -66,7 +66,9 @@ python scripts/demo-review.py    # 審查模式：改壞兩格，算出每平方
   24 格群組小計、3 格總修正數。優劣等級是兩欄依新北手冊第 5 章第 42 頁
 - 表4：表頭、區域因素調整百分率、調整百分率絕對值加總、價格形成因素之相近程度、
   比較標的權重、試算價格、比準地比較價格、比準地地價（第21條分段進位）
-- 表3：四個地價區段各一張工作表，每張回填 23 格
+- 表3：四個地價區段各一張工作表，每張回填 79 格
+  （23 格量測值與勾選 ＋ 28 個細項的優劣等級與總級數 56 格）
+  等級欄在細項名稱左邊的兩個窄欄，依新北手冊第 3 章第 25 頁
 - 87 列依據鏈，每格指得回評價基準明細表頁碼與矩陣查表結果。敘述是規則式產生的
 - 每次產出附 10 項自我驗證與 `verification-report.json`
 - 三種介面都通：CLI、`POST /api/survey/xlsx`、前端畫面
@@ -105,7 +107,7 @@ python scripts/demo-review.py    # 審查模式：改壞兩格，算出每平方
 
 ```bash
 export VALUATION_DOC_DIR="$(cd ../docs/official/real-estate-valuation && pwd)"
-.venv/bin/python -m pytest -q -p no:warnings      # 363 passed
+.venv/bin/python -m pytest -q -p no:warnings      # 365 passed
 ```
 
 官方 xlsx 範本與題目 PDF 在 `../正式題目/`。API 用 `VALUATION_TEMPLATE_DIR` 覆寫。
