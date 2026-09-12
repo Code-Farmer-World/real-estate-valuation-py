@@ -41,6 +41,16 @@ from .kernel_api import (
     validation_errors,
 )
 from .review import review
+from xlsxform.pipeline import (
+    OUTPUT_STEM,
+    compute_all,
+    find_template,
+    load_facts,
+    write_table3,
+    write_table4,
+    write_table5,
+)
+from xlsxform.verify import verify_outputs
 
 PARSERS = {"表1": table1.parse, "表5-2": table5_2.parse, "表4": table4.parse}
 
@@ -334,6 +344,195 @@ def download_form(token: str, filename: str) -> FileResponse:
     if not path.exists():
         raise HTTPException(404, "檔案已不存在，請重新產出（產出的書表只暫存到服務重啟）")
     return FileResponse(path, media_type="application/pdf", filename=filename)
+
+
+SURVEY_DIR = Path(tempfile.gettempdir()) / "valuation-survey"
+
+#: 產出的檔名（`xlsxform.pipeline.OUTPUT_STEM` 加上版本後綴），供下載端點白名單用。
+_SURVEY_FILENAMES = {
+    f"{stem}-{tag}.xlsx"
+    for stem in OUTPUT_STEM.values()
+    for tag in ("filled", "live", "final")
+} | {"verification-report.json"}
+
+
+@app.post("/api/survey/xlsx")
+async def compute_from_survey_xlsx(file: UploadFile = File(...)) -> dict[str, Any]:
+    """上傳填好的表3 勘查表 xlsx，算出表5-1 與表4，並產出可交件的書表。
+
+    這一支是「產出模式」的入口，與 `/api/review`（審查已填好的書表）方向相反。
+    正式題目的表5-1 與表4 是空白待填，而勘查表沒有優劣等級這一欄，
+    所以審查那條路在那個案子沒有對照對象。
+
+    回傳計算結果、完整依據鏈與檔案下載連結。依據鏈是這一支的重點：
+    116 格等級與 87 格修正率的每一格都附量測值、級距條文、基準表頁碼、
+    矩陣查表結果與一句敘述，供審查或訴願時舉證。
+
+    計算仍然全部在 `kernel/`，這一層只做檔案進出與 JSON。
+    """
+    name = (file.filename or "").lower()
+    if not name.endswith(".xlsx"):
+        raise HTTPException(422, "只接受 xlsx 檔，收到的是：%s" % file.filename)
+
+    if not paths.TEMPLATE_DIR.exists():
+        raise HTTPException(
+            503,
+            "伺服器找不到官方 xlsx 空白範本目錄（%s）。"
+            "那些檔案不在版控裡，請以環境變數 VALUATION_TEMPLATE_DIR 指定位置。"
+            % paths.TEMPLATE_DIR,
+        )
+
+    token = uuid.uuid4().hex
+    work = SURVEY_DIR / token
+    work.mkdir(parents=True, exist_ok=True)
+    src = work / "survey.xlsx"
+    src.write_bytes(await file.read())
+
+    try:
+        facts = load_facts(paths.SURVEY_FACTS_JSON, src)
+        computed = compute_all(facts)
+        produced = _write_all_forms(facts, computed, work)
+        report, report_path = _verify(facts, computed, work)
+        produced.append(report_path)
+    except (ValueError, KeyError, LookupError) as e:
+        shutil.rmtree(work, ignore_errors=True)
+        raise HTTPException(400, "%s：%s" % (type(e).__name__, e)) from None
+    except SystemExit as e:
+        # pipeline 對「上傳的檔案不是本案勘查表」這類情形用 SystemExit 中止
+        shutil.rmtree(work, ignore_errors=True)
+        raise HTTPException(400, str(e)) from None
+
+    t5, t4 = computed["table5_1"], computed["table4"]
+    return ok(
+        {
+            "id": token,
+            "case_id": facts["case_id"],
+            "ruleset_id": t5.ruleset_id,
+            "benchmark": t5.benchmark,
+            "comparables": t5.comparables,
+            "cell_counts": t5.cell_counts,
+            "table5_1": {
+                "groups": t5.groups,
+                "factor_ids": _factor_ids(t5),
+                "grades": {
+                    seg: {fid: t5.grade(seg, fid).text for fid in _factor_ids(t5)}
+                    for seg in [t5.benchmark] + list(t5.comparables)
+                },
+                "subtotals": {
+                    seg: {g: t5.subtotal(seg, g) for g in t5.groups} for seg in t5.comparables
+                },
+                "totals": t5.totals,
+            },
+            "table4": {
+                k: t4[k]
+                for k in (
+                    "regional_pct",
+                    "abs_sum_pct",
+                    "similarity",
+                    "weight_pct",
+                    "trial_price",
+                    "benchmark_comparison_price",
+                    "benchmark_land_price",
+                )
+            },
+            "premise": "表4 個別因素（項目7至25）題目未提供宗地個別條件資料，"
+            "依表4 註記由地價查估單位辦理，本次計算以 0% 計。",
+            "evidence": [s.to_dict() for s in computed["evidence"]],
+            "verification": report.to_dict(),
+            "read_warnings": facts.get("_read_warnings") or [],
+            "files": [
+                {
+                    "filename": p.name,
+                    "size": p.stat().st_size,
+                    "link": "/api/survey/%s/%s" % (token, p.name),
+                }
+                for p in produced
+            ],
+        }
+    )
+
+
+def _factor_ids(t5: Any) -> list[str]:
+    """表5-1 的細項順序。從 grades 的鍵取，不另外相依規則集。"""
+    seen: list[str] = []
+    for seg, fid in t5.grades:
+        if seg == t5.benchmark:
+            seen.append(fid)
+    return seen
+
+
+def _write_all_forms(facts: dict[str, Any], computed: dict[str, Any], work: Path) -> list[Path]:
+    produced = [
+        write_table3(
+            facts,
+            find_template(paths.TEMPLATE_DIR, "table3"),
+            work / f"{OUTPUT_STEM['table3']}-filled.xlsx",
+        )
+    ]
+    for live, tag in ((True, "live"), (False, "final")):
+        p, _ = write_table5(
+            facts,
+            computed,
+            find_template(paths.TEMPLATE_DIR, "table5"),
+            work / f"{OUTPUT_STEM['table5']}-{tag}.xlsx",
+            live=live,
+        )
+        produced.append(p)
+        produced.append(
+            write_table4(
+                computed,
+                find_template(paths.TEMPLATE_DIR, "table4"),
+                work / f"{OUTPUT_STEM['table4']}-{tag}.xlsx",
+                live=live,
+            )
+        )
+    return produced
+
+
+def _verify(facts: dict[str, Any], computed: dict[str, Any], work: Path) -> tuple[Any, Path]:
+    report = verify_outputs(
+        table5_final=work / f"{OUTPUT_STEM['table5']}-final.xlsx",
+        table5_live=work / f"{OUTPUT_STEM['table5']}-live.xlsx",
+        table4_final=work / f"{OUTPUT_STEM['table4']}-final.xlsx",
+        table4_live=work / f"{OUTPUT_STEM['table4']}-live.xlsx",
+        expected=facts["expected"],
+        comparables=computed["table4"]["comparables"],
+        ruleset_findings=computed["ruleset_findings"],
+    )
+    path = work / "verification-report.json"
+    path.write_text(
+        json.dumps(
+            {
+                "case_id": facts["case_id"],
+                "ruleset_id": computed["table5_1"].ruleset_id,
+                "premise": "表4 個別因素（項目7至25）題目未提供宗地個別條件資料，"
+                "依表4 註記由地價查估單位辦理，本次計算以 0% 計。",
+                **report.to_dict(),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return report, path
+
+
+@app.get("/api/survey/{token}/{filename}")
+def download_survey_output(token: str, filename: str) -> FileResponse:
+    """下載產出的 xlsx 或驗證報告。回傳檔案本身，不走 JSON 信封。"""
+    if not token.isalnum() or "/" in filename or "\\" in filename:
+        raise HTTPException(400, "路徑不合法")
+    if filename not in _SURVEY_FILENAMES:
+        raise HTTPException(404, "沒有這個檔名：%s" % filename)
+    path = SURVEY_DIR / token / filename
+    if not path.exists():
+        raise HTTPException(404, "檔案已不存在，請重新產出（產出的檔案只暫存到服務重啟）")
+    media = (
+        "application/json"
+        if filename.endswith(".json")
+        else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    return FileResponse(path, media_type=media, filename=filename)
 
 
 @app.get("/api/health")

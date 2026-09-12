@@ -22,12 +22,23 @@ DOC_DIR = Path(
     )
 ).resolve()
 
+#: 官方 xlsx 空白範本所在目錄（表3、表4、表5 三份）。
+#: 那些檔案被根目錄 .gitignore 的 *.xlsx 排除，不在版控裡，所以位置要能覆寫。
+#: 預設找 workspace 外層的「正式題目」，部署時用環境變數指向掛載的唯讀目錄。
+TEMPLATE_DIR = Path(
+    os.environ.get("VALUATION_TEMPLATE_DIR", ROOT.parent / "正式題目")
+).resolve()
+
 SAMPLE_FORMS_PDF = DOC_DIR / "查估書表範本.pdf"
 CRITERIA_PDF = DOC_DIR / "評價基準明細表範例.pdf"
 MANUAL_PDF = DOC_DIR / "土地徵收補償市價查估作業手冊.pdf"
 NTPC_MANUAL_PDF = DOC_DIR / "新北查估書手冊.pdf"
 
 GOLDEN_CASE = ROOT / "kernel" / "golden" / "case_1140901_99_001.json"
+
+#: 案件設定（案號、比準地、表4 已給的交易實例資料、case_overrides）。
+#: 勘查事實本身由上傳的 xlsx 提供，這份只補 xlsx 上沒有的資訊。
+SURVEY_FACTS_JSON = ROOT / "kernel" / "fixtures" / "shulin_survey_facts.json"
 
 
 def require(path: Path) -> Path:

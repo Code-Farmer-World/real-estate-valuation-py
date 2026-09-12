@@ -42,8 +42,14 @@ _ABSENT_TOKENS = {"", "-", "－", "○", "◯", "〇"}
 _SEGMENT_RE = re.compile(layout.TABLE3_SEGMENT_NO_PATTERN)
 
 
-class SurveyReadError(Exception):
-    """讀取失敗且無法繼續。與「某一格沒有值」區分開。"""
+class SurveyReadError(ValueError):
+    """讀取失敗且無法繼續。與「某一格沒有值」區分開。
+
+    刻意繼承 ValueError：讀取失敗本質是輸入值的問題，而 api 層對 ValueError
+    已經有「回 400 並附訊息」的處理。若自己另立一支，壞掉的上傳檔案會變成
+    500 而讓使用者只看到通用錯誤（實測踩過：壞的 xlsx 讓 zipfile.BadZipFile
+    一路逸出）。
+    """
 
 
 def read_table3(path: str | Path) -> dict[str, Any]:
@@ -56,7 +62,15 @@ def read_table3(path: str | Path) -> dict[str, Any]:
     if not path.exists():
         raise SurveyReadError(f"找不到檔案 {path}")
 
-    wb = openpyxl.load_workbook(path, data_only=True)
+    try:
+        wb = openpyxl.load_workbook(path, data_only=True)
+    except Exception as e:
+        # openpyxl 對非 xlsx 的檔案丟的是 zipfile.BadZipFile 之類，
+        # 那些對呼叫端沒有意義，轉成看得懂的訊息。
+        raise SurveyReadError(
+            f"{path.name} 無法以 Excel 格式開啟（{type(e).__name__}）。"
+            f"請確認上傳的是 .xlsx 檔而不是改過副檔名的其他格式。"
+        ) from e
     sheets = [ws for ws in wb.worksheets if ws.sheet_state != "hidden"]
     if not sheets:
         raise SurveyReadError(f"{path.name} 沒有可見的工作表")
