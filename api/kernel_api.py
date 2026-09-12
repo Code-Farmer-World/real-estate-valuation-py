@@ -22,9 +22,12 @@ from src.compute import (  # noqa: E402
     ComparableResult,
     Table4Result,
     appraise_table4,
+    build_table5_1,
+    group_subtotals,
     round_up_by_tier,
     trial_price,
 )
+from src.evidence import build_evidence  # noqa: E402
 from src.matrix import lookup  # noqa: E402
 from src.ruleset import RULES_DIR, RuleSet, load_moi_caps, load_ruleset  # noqa: E402
 from src.validate import check_ruleset, errors as validation_errors  # noqa: E402
@@ -33,6 +36,9 @@ from src.validate import warnings as validation_warnings  # noqa: E402
 __all__ = [
     "ComparableResult",
     "Grade",
+    "build_evidence",
+    "build_table5_1",
+    "group_subtotals",
     "RULES_DIR",
     "RuleSet",
     "Table4Result",

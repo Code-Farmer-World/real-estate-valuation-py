@@ -360,6 +360,9 @@ class GradeCell:
     reason: str
     source_page: int | None = None
     applicable: bool = True
+    # 判級所依據的量測值。留著才能把依據講成一句完整的話
+    # （「主要道路寬度 7m，落在未滿8m 這一級」），也才追溯得回勘查表。
+    value: Any = None
 
     @property
     def text(self) -> str:
@@ -482,6 +485,7 @@ def build_table5_1(
                     reason="本案不適用，書表填「-」（不作評定，非等級為 0）",
                     source_page=f.source_page,
                     applicable=False,
+                    value=facts[fid],
                 )
                 continue
             g = classify(f, facts[fid])
@@ -492,6 +496,7 @@ def build_table5_1(
                 label=g.label,
                 reason=g.reason,
                 source_page=g.source_page,
+                value=facts[fid],
             )
 
     corrections: dict[tuple[str, str], CorrectionCell] = {}
