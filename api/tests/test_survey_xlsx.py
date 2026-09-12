@@ -20,7 +20,7 @@ from fastapi.testclient import TestClient
 
 import paths
 from api.main import app
-from xlsxform.pipeline import find_template, write_table3
+from xlsxform.pipeline import DELIVERY_NOTE_NAME, find_template, write_table3
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 FACTS = json.loads(
@@ -187,11 +187,13 @@ def test_verification_passes(result):
 
 def test_files_include_all_forms_and_report(result):
     names = [f["filename"] for f in result["files"]]
-    assert len(names) == 6
+    assert len(names) == 7
     assert any("表3" in n for n in names)
     assert sum(1 for n in names if "表5" in n) == 2  # live + final
     assert sum(1 for n in names if "表4" in n) == 2
     assert "verification-report.json" in names
+    # 給收件人看的說明。光看檔名分不出該用哪一份，也看不出個別因素以 0 計
+    assert DELIVERY_NOTE_NAME in names
     for f in result["files"]:
         assert f["size"] > 0
         assert f["link"].startswith("/api/survey/")
@@ -202,6 +204,36 @@ def test_files_are_downloadable(client, result):
         r = client.get(f["link"])
         assert r.status_code == 200, f["filename"]
         assert len(r.content) == f["size"]
+
+
+def test_delivery_note_states_the_premises_and_which_file_to_submit(client, result):
+    """交付說明必須講清楚三件事，否則收件的人會用錯檔案或誤讀數字。
+
+    個別因素以 0 計那個前提有寫在表4 的全案備註欄，但那是一格窄長的合併格,
+    很容易被忽略。這裡是第二道。
+    """
+    link = next(f["link"] for f in result["files"] if f["filename"] == DELIVERY_NOTE_NAME)
+    r = client.get(link)
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/plain")
+    text = r.content.decode("utf-8")
+
+    # 該用哪一份
+    assert "交件用這一份" in text
+    assert "-final.xlsx" in text and "-live.xlsx" in text
+
+    # 三個前提
+    assert "個別因素" in text and "以 0 計" in text
+    assert "第 20 條" in text
+    assert "不列入群組小計" in text
+    assert "200%" in text and "八公尺" in text
+
+    # 數字與來源
+    assert "176,921" in text
+    assert "177,000" in text
+    assert "第 21 條" in text
+    assert "逐格比對一致" in text
+    assert "不經過任何生成式模型" in text
 
 
 def test_download_rejects_unknown_filename(client, result):

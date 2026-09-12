@@ -28,6 +28,8 @@ cd real-estate-valuation-py && ./scripts/verify-all.sh
 - 87 列依據鏈，每格指得回評價基準明細表頁碼與矩陣查表結果。敘述是規則式產生的
 - 每次產出附 10 項自我驗證與 `verification-report.json`
 - 三種介面都通：CLI、`POST /api/survey/xlsx`、前端畫面
+- 產出目錄附一份「交付說明.txt」，講明該用哪一份檔案與三個前提
+  （個別因素以 0 計、三項修正移至表4、容積率以 200% 計）
 - 匯入填好的表3 xlsx（`--from-xlsx`），round-trip 不掉資料
 
 ## 已驗證的數字（個別因素以 0 計）
@@ -61,7 +63,7 @@ cd real-estate-valuation-py && ./scripts/verify-all.sh
 
 ```bash
 export VALUATION_DOC_DIR="$(cd ../docs/official/real-estate-valuation && pwd)"
-.venv/bin/python -m pytest -q -p no:warnings      # 354 passed
+.venv/bin/python -m pytest -q -p no:warnings      # 355 passed
 ```
 
 官方 xlsx 範本與題目 PDF 在 `../正式題目/`。API 用 `VALUATION_TEMPLATE_DIR` 覆寫。

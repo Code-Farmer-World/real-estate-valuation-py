@@ -22,6 +22,7 @@ from .pipeline import (
     compute_all,
     find_template,
     load_facts,
+    write_delivery_note,
     write_table3,
     write_table4,
     write_table5,
@@ -147,6 +148,7 @@ def main(argv: list[str] | None = None) -> int:
         encoding="utf-8",
     )
     produced.append(report_path)
+    produced.append(write_delivery_note(args.out, facts, computed, report))
 
     print()
     print("═══ 產出 ═══")

@@ -42,10 +42,12 @@ from .kernel_api import (
 )
 from .review import review
 from xlsxform.pipeline import (
+    DELIVERY_NOTE_NAME,
     OUTPUT_STEM,
     compute_all,
     find_template,
     load_facts,
+    write_delivery_note,
     write_table3,
     write_table4,
     write_table5,
@@ -353,7 +355,7 @@ _SURVEY_FILENAMES = {
     f"{stem}-{tag}.xlsx"
     for stem in OUTPUT_STEM.values()
     for tag in ("filled", "live", "final")
-} | {"verification-report.json"}
+} | {"verification-report.json", DELIVERY_NOTE_NAME}
 
 
 @app.post("/api/survey/xlsx")
@@ -394,6 +396,7 @@ async def compute_from_survey_xlsx(file: UploadFile = File(...)) -> dict[str, An
         produced = _write_all_forms(facts, computed, work)
         report, report_path = _verify(facts, computed, work)
         produced.append(report_path)
+        produced.append(write_delivery_note(work, facts, computed, report))
     except (ValueError, KeyError, LookupError) as e:
         shutil.rmtree(work, ignore_errors=True)
         raise HTTPException(400, "%s：%s" % (type(e).__name__, e)) from None
@@ -527,11 +530,12 @@ def download_survey_output(token: str, filename: str) -> FileResponse:
     path = SURVEY_DIR / token / filename
     if not path.exists():
         raise HTTPException(404, "檔案已不存在，請重新產出（產出的檔案只暫存到服務重啟）")
-    media = (
-        "application/json"
-        if filename.endswith(".json")
-        else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+    if filename.endswith(".json"):
+        media = "application/json"
+    elif filename.endswith(".txt"):
+        media = "text/plain; charset=utf-8"
+    else:
+        media = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     return FileResponse(path, media_type=media, filename=filename)
 
 
