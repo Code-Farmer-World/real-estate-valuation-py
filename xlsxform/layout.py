@@ -201,6 +201,17 @@ TABLE3_CELL_IMPROVEMENT_LINE2 = "E32"
 TABLE3_CELL_BUILDING_DENSITY = "Q42"
 TABLE3_CELL_BUILDING_TYPE = "Q43"
 
+#: 表3 上以百分比形式記載的細項。寫入時要加 % 尾綴，讀取時要把 % 去掉。
+#: 寫入與讀取共用這一份宣告，先前只有 fill.py 有，讀取端若自己再寫一份會不同步。
+TABLE3_PERCENT_FIELDS = (
+    "regional.land_control.building_coverage",
+    "regional.land_control.floor_area_ratio",
+)
+
+#: 從工作表名稱抓地價區段編號的樣式（例如「表3 P001-00」→「P001-00」）。
+#: 抓不到就退回讀 TABLE3_CELL_SEGMENT_NO 那一格，兩者都沒有就報錯不猜。
+TABLE3_SEGMENT_NO_PATTERN = r"P\d{3}-\d{2}"
+
 #: 本案有 13 個細項是圈選未勾、距離空白。那些格子維持範本原狀不動，
 #: 因為「沒有勾選」本身就是事實。清單放在這裡是為了讓讀程式的人知道
 #: 這不是漏填。

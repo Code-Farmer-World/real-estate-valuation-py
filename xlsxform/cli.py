@@ -35,7 +35,8 @@ from kernel.src.ruleset import load_ruleset
 from kernel.src.validate import check_ruleset, errors
 
 from . import fill, layout
-from .write import load_template, save, the_visible_sheet, duplicate_sheet
+from .read import apply_case_overrides, read_table3
+from .write import duplicate_sheet, load_template, save, the_visible_sheet
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_FACTS = ROOT / "kernel" / "fixtures" / "shulin_survey_facts.json"
@@ -160,16 +161,79 @@ def write_table4(computed: dict, template: Path, out: Path, *, live: bool) -> Pa
     return save(wb, out)
 
 
+def load_facts(settings_path: Path, from_xlsx: Path | None) -> dict:
+    """組出勘查事實。
+
+    `settings_path` 那份 JSON 提供勘查表上沒有的資訊：案號、比準地是哪個區段、
+    表4 已給的交易實例資料（正常單價、交易日期、調整百分率）、以及
+    `case_overrides`。
+
+    `from_xlsx` 給了就用填好的表3 xlsx 覆蓋 `segments` 區塊，沒給就直接用
+    JSON 裡的（人工核對版本）。兩條路徑往下走的程式完全相同。
+    """
+    facts = json.loads(settings_path.read_text(encoding="utf-8"))
+    if from_xlsx is None:
+        return facts
+
+    read = read_table3(from_xlsx)
+    segments = apply_case_overrides(read["segments"], facts.get("case_overrides"))
+
+    expected = set([facts["benchmark"]] + list(facts["comparables"]))
+    got = set(segments)
+    if got != expected:
+        raise SystemExit(
+            f"表3 xlsx 讀到的區段 {sorted(got)} 與案件設定的 {sorted(expected)} 不符。"
+            f"請確認上傳的檔案是本案的勘查表。"
+        )
+
+    for seg, data in segments.items():
+        merged = dict(facts["segments"].get(seg, {}))
+        merged.update(
+            {
+                "raw": data["raw"],
+                "facts": data["facts"],
+                "segment_range": data.get("segment_range") or merged.get("segment_range"),
+                "table3_only": data.get("table3_only") or merged.get("table3_only"),
+                # extras 是路名與土地改良勾選項目。漏傳的話回填表3 時那幾格會消失，
+                # 因為 reader 產出的 raw 是型別轉換後的數值，解析不出路名。
+                "extras": data.get("extras") or merged.get("extras"),
+                "source": data.get("source"),
+            }
+        )
+        facts["segments"][seg] = merged
+
+    facts["_read_warnings"] = read["warnings"]
+    facts["_read_from"] = str(from_xlsx)
+    return facts
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="產出填好的樹林住宅三份查估書表")
-    ap.add_argument("--facts", type=Path, default=DEFAULT_FACTS, help="勘查事實 JSON")
+    ap.add_argument(
+        "--facts",
+        type=Path,
+        default=DEFAULT_FACTS,
+        help="案件設定 JSON（案號、比準地、表4 已給資料、case_overrides）。"
+        "未搭配 --from-xlsx 時，勘查事實也從這裡讀",
+    )
+    ap.add_argument(
+        "--from-xlsx",
+        type=Path,
+        default=None,
+        help="填好的表3 勘查表 xlsx。給了就用它取代 --facts 裡的 segments 區塊",
+    )
     ap.add_argument(
         "--templates", type=Path, required=True, help="官方 xlsx 空白範本所在目錄"
     )
     ap.add_argument("--out", type=Path, required=True, help="輸出目錄")
     args = ap.parse_args(argv)
 
-    facts = json.loads(Path(args.facts).read_text(encoding="utf-8"))
+    facts = load_facts(Path(args.facts), args.from_xlsx)
+    if facts.get("_read_from"):
+        print(f"勘查事實來源：{facts['_read_from']}")
+        for w in facts.get("_read_warnings") or []:
+            print(f"  ⚠️ {w['segment']} {w['factor_id']}：{w['reason']}")
+        print()
     computed = compute_all(facts)
     t5, t4 = computed["table5_1"], computed["table4"]
 

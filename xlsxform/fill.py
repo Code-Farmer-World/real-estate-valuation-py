@@ -243,10 +243,8 @@ def fill_table4(ws: Worksheet, data: dict[str, Any], *, live: bool) -> None:
 #: 表3 的建蔽率、容積率填的是勘查表原載值（字串含 %），不是計算用值。
 #: 容積率一律以 200% 計算是局處對「計算」的指示，勘查表本身仍應忠實記載現況。
 #: 這個區分寫在表5-1 的備註欄。
-_PERCENT_FIELDS = (
-    "regional.land_control.building_coverage",
-    "regional.land_control.floor_area_ratio",
-)
+#: 清單本身在 layout.py，寫入與讀取共用同一份宣告。
+_PERCENT_FIELDS = layout.TABLE3_PERCENT_FIELDS
 
 
 def fill_table3(ws: Worksheet, segment: str, seg_data: dict[str, Any], *, year_period: str) -> None:
@@ -272,15 +270,28 @@ def fill_table3(ws: Worksheet, segment: str, seg_data: dict[str, Any], *, year_p
     for fid, coord in layout.TABLE3_VALUE_CELLS_B.items():
         put(ws, coord, facts.get(fid))
 
-    road_raw = raw.get("regional.transport.main_road_width", "")
-    name = _road_name(road_raw)
+    # 路名與土地改良的勾選項目優先取 extras（xlsx reader 產出的），
+    # 沒有才從 raw 的原始字串解析（人工核對的 fixtures 是那種格式）。
+    # 少了這個 fallback，round-trip 會掉字：raw 經過 reader 之後是型別轉換
+    # 後的數值，解析不出路名，也拿不到勾選了哪幾項。
+    extras = seg_data.get("extras") or {}
+
+    name = extras.get("main_road_name") or _road_name(
+        raw.get("regional.transport.main_road_width", "")
+    )
     put(ws, layout.TABLE3_CELL_MAIN_ROAD_NAME, name)
     put(ws, layout.TABLE3_CELL_MAIN_ROAD_WIDTH, facts.get("regional.transport.main_road_width"))
     put(ws, layout.TABLE3_CELL_AVG_ROAD_WIDTH, facts.get("regional.transport.avg_road_width"))
 
+    items = extras.get("improvement_items")
+    improvement_source = (
+        "".join(f"■{name}" for name in items)
+        if items
+        else raw.get("regional.land_improvement.site_improvement")
+    )
     _fill_improvement(
         ws,
-        raw.get("regional.land_improvement.site_improvement"),
+        improvement_source,
         expect_count=facts.get("regional.land_improvement.site_improvement"),
     )
 
