@@ -302,3 +302,259 @@ def appraise_table4(
         [r.trial_price for r in results], weights_pct, warnings=warnings
     )
     return Table4Result(results, bcp, round_up_by_tier(bcp), warnings)
+
+
+# ---------- 表5-1 產出 ----------
+#
+# 與 appraise_table4 的差別在方向。那條路是「已經有填好的表，重算一遍去比對」，
+# 這條路是「表是空的，算出每一格該填什麼」。正式題目的表5-1 與表4 是空白待填，
+# 而勘查表（表3）根本沒有優劣等級這一欄，所以沒有對照對象可比。
+#
+# 計算仍然全部在 kernel。api 只負責把結果轉成 JSON，xlsxform 只負責寫進格子。
+
+
+def group_order(rs: RuleSet) -> list[str]:
+    """群組的出現順序，供表5-1 的八個小計欄依序排列。
+
+    取自規則集裡細項的定義順序（dict 保序），不另外寫死一份清單，
+    這樣換行政區時順序自動跟著規則集走。
+    """
+    seen: list[str] = []
+    for f in rs.factors.values():
+        if f.group and f.group not in seen:
+            seen.append(f.group)
+    return seen
+
+
+def group_subtotals(rs: RuleSet, corrections: dict[str, Correction]) -> dict[str, Decimal]:
+    """按 factor.group 分組加總修正百分比，供表5-1 的「百分比小計」欄。
+
+    `total_pct()` 是全部加總（表4 的個別因素合計要的是那個），表5-1 需要的是
+    分成八個群組各自加總再相加。
+
+    沒有出現在 `corrections` 裡的細項視為不計入，這涵蓋兩種情況：
+    表5-1 備註說修正併同於表4 處理的三項（使用分區、建蔽率、容積率），
+    以及本案不適用的細項（題目已預填「-」者）。
+    """
+    out = {g: Decimal(0) for g in group_order(rs)}
+    for fid, c in corrections.items():
+        g = rs[fid].group
+        if g not in out:
+            raise KeyError(f"{fid} 的群組 {g!r} 不在規則集的群組清單裡")
+        out[g] += c.pct
+    return out
+
+
+@dataclass
+class GradeCell:
+    """表5-1 的一格優劣等級。
+
+    `grade` 為 None 表示本案不適用這個細項，書表上填「-」。這與「等級是某個
+    數字但修正率剛好為 0」不同，後者是四個區段同級的正常結果。
+    """
+
+    factor_id: str
+    segment: str
+    grade: int | None
+    label: str
+    reason: str
+    source_page: int | None = None
+    applicable: bool = True
+
+    @property
+    def text(self) -> str:
+        """填進書表的文字。"""
+        return "-" if self.grade is None else str(self.grade)
+
+
+@dataclass
+class CorrectionCell:
+    """表5-1 的一格修正百分比。
+
+    `counted` 為 False 表示這一格填 0.00 但不計入群組小計。刻意填 0 而不留空，
+    才分得出「已移轉到表4 處理」與「漏填」。
+    """
+
+    factor_id: str
+    segment: str
+    pct: Decimal
+    reason: str
+    source_page: int | None = None
+    counted: bool = True
+
+
+@dataclass
+class Table5_1Result:
+    """表5-1 的全部格子。
+
+    格數（樹林住宅 29 個細項、四個區段、三個比較標的）：
+        grades       29 × 4 = 116
+        corrections  29 × 3 =  87
+        subtotals     8 × 3 =  24
+        totals                 3
+    """
+
+    ruleset_id: str
+    benchmark: str
+    comparables: list[str]
+    groups: list[str]
+    grades: dict[tuple[str, str], GradeCell]
+    corrections: dict[tuple[str, str], CorrectionCell]
+    subtotals: dict[tuple[str, str], Decimal]
+    totals: dict[str, Decimal]
+
+    def grade(self, segment: str, factor_id: str) -> GradeCell:
+        return self.grades[(segment, factor_id)]
+
+    def correction(self, segment: str, factor_id: str) -> CorrectionCell:
+        return self.corrections[(segment, factor_id)]
+
+    def subtotal(self, segment: str, group: str) -> Decimal:
+        return self.subtotals[(segment, group)]
+
+    @property
+    def cell_counts(self) -> dict[str, int]:
+        return {
+            "grades": len(self.grades),
+            "corrections": len(self.corrections),
+            "subtotals": len(self.subtotals),
+            "totals": len(self.totals),
+        }
+
+    def abs_sum_pct(self, segment: str) -> Decimal:
+        """該比較標的的區域因素調整百分率絕對值加總。
+
+        只計入 counted 的格子。表4 的「調整百分率絕對值加總」還要再加上個別因素
+        各項與日期調整，那一段在 abs_sum_pct() 函式處理。
+        """
+        return sum(
+            (abs(c.pct) for (seg, _), c in self.corrections.items() if seg == segment and c.counted),
+            Decimal(0),
+        )
+
+
+def build_table5_1(
+    rs: RuleSet,
+    facts_by_segment: dict[str, dict[str, Any]],
+    *,
+    benchmark: str,
+    comparables: list[str],
+    excluded: tuple[str, ...] = (),
+    not_applicable: tuple[str, ...] = (),
+) -> Table5_1Result:
+    """從勘查事實算出表5-1 的每一格。
+
+    參數：
+        facts_by_segment  {區段編號: {factor_id: 量測值}}，四個區段都要有 29 項
+        benchmark         比準地的區段編號
+        comparables       比較標的的區段編號，依表上欄位順序
+        excluded          修正併同於表4 處理者。等級照算，修正率填 0 且不計入小計
+        not_applicable    本案不適用者。等級填「-」，修正率填 0 且不計入小計
+
+    `excluded` 與 `not_applicable` 都不計入小計，差別在等級欄的填法。
+    這個區分來自書表本身：表5-1 備註說前者的修正併同於表4，而後者是題目已經
+    預填「-」表示不作評定。
+    """
+    ex, na = set(excluded), set(not_applicable)
+    overlap = ex & na
+    if overlap:
+        raise ValueError(f"細項不能同時列為 excluded 與 not_applicable：{sorted(overlap)}")
+
+    segments = [benchmark] + list(comparables)
+    for seg in segments:
+        if seg not in facts_by_segment:
+            raise KeyError(f"缺少區段 {seg} 的勘查事實")
+        missing = set(rs.factor_ids) - set(facts_by_segment[seg])
+        if missing:
+            raise KeyError(f"區段 {seg} 缺少 {len(missing)} 個細項的事實：{sorted(missing)[:5]}")
+
+    grades: dict[tuple[str, str], GradeCell] = {}
+    for seg in segments:
+        facts = facts_by_segment[seg]
+        for fid in rs.factor_ids:
+            f = rs[fid]
+            if fid in na:
+                grades[(seg, fid)] = GradeCell(
+                    factor_id=fid,
+                    segment=seg,
+                    grade=None,
+                    label="-",
+                    reason="本案不適用，書表填「-」（不作評定，非等級為 0）",
+                    source_page=f.source_page,
+                    applicable=False,
+                )
+                continue
+            g = classify(f, facts[fid])
+            grades[(seg, fid)] = GradeCell(
+                factor_id=fid,
+                segment=seg,
+                grade=g.grade,
+                label=g.label,
+                reason=g.reason,
+                source_page=g.source_page,
+            )
+
+    corrections: dict[tuple[str, str], CorrectionCell] = {}
+    for seg in comparables:
+        for fid in rs.factor_ids:
+            f = rs[fid]
+            if fid in na:
+                corrections[(seg, fid)] = CorrectionCell(
+                    factor_id=fid,
+                    segment=seg,
+                    pct=Decimal(0),
+                    reason="本案不適用，修正率 0.00 且不計入小計",
+                    source_page=f.source_page,
+                    counted=False,
+                )
+                continue
+            if fid in ex:
+                corrections[(seg, fid)] = CorrectionCell(
+                    factor_id=fid,
+                    segment=seg,
+                    pct=Decimal(0),
+                    reason="修正併同於比較法調查估價表宗地個別因素考量調整，本表以 0.00 計且不計入小計",
+                    source_page=f.source_page,
+                    counted=False,
+                )
+                continue
+            c = lookup(f, grades[(benchmark, fid)].grade, grades[(seg, fid)].grade)
+            corrections[(seg, fid)] = CorrectionCell(
+                factor_id=fid,
+                segment=seg,
+                pct=c.pct,
+                reason=c.reason,
+                source_page=c.source_page,
+            )
+
+    groups = group_order(rs)
+    subtotals: dict[tuple[str, str], Decimal] = {}
+    totals: dict[str, Decimal] = {}
+    for seg in comparables:
+        counted = {
+            fid: Correction(
+                factor_id=fid,
+                benchmark_grade=grades[(benchmark, fid)].grade or 0,
+                comparable_grade=grades[(seg, fid)].grade or 0,
+                pct=cell.pct,
+                reason=cell.reason,
+                source_page=cell.source_page,
+            )
+            for fid in rs.factor_ids
+            if (cell := corrections[(seg, fid)]).counted
+        }
+        subs = group_subtotals(rs, counted)
+        for g in groups:
+            subtotals[(seg, g)] = subs[g]
+        totals[seg] = sum(subs.values(), Decimal(0))
+
+    return Table5_1Result(
+        ruleset_id=rs.ruleset_id,
+        benchmark=benchmark,
+        comparables=list(comparables),
+        groups=groups,
+        grades=grades,
+        corrections=corrections,
+        subtotals=subtotals,
+        totals=totals,
+    )
