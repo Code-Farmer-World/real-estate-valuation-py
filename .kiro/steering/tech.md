@@ -128,8 +128,17 @@ cd real-estate-valuation-py-main
 .venv/bin/python -m pdfform.cli <pdf> <輸出目錄>
 
 # 回填官方 xlsx 空白範本（樹林住宅那條路，2026-09-12 新增）
+# 勘查事實從人工核對的 fixtures JSON 讀
 .venv/bin/python -m xlsxform.cli --templates <範本目錄> --out <輸出目錄>
+
+# 同上，但勘查事實改從填好的表3 xlsx 讀（實際的匯入路徑）
+.venv/bin/python -m xlsxform.cli --from-xlsx <填好的表3.xlsx> \
+    --templates <範本目錄> --out <輸出目錄>
 ```
+
+兩條輸入路徑的產出實測逐格相同（1,848 個有值格子零差異）。`--from-xlsx` 仍需要
+`--facts` 提供勘查表上沒有的資訊（案號、比準地是哪個區段、表4 已給的交易實例
+資料、`case_overrides`），未指定時預設讀 `kernel/fixtures/shulin_survey_facts.json`。
 
 `xlsxform.cli` 產出五個檔案：表3 一份（四張工作表，一個區段一張）、
 表5-1 與表4 各有活版（含 Excel 公式）與定版（純數值）。範本目錄指向官方三份

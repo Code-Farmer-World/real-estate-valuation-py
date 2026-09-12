@@ -136,13 +136,28 @@ parser/  ──→  api/  ──→  kernel/
 ```
 xlsxform/
 ├── layout.py     官方 xlsx 範本的格位對映。純資料無邏輯，全部是實測座標，
-│                 附 check_layout() 自我檢查（它抓的是「對映表打錯了」）
+│                 附 check_layout() 自我檢查（它抓的是「對映表打錯了」）。
+│                 讀與寫共用這一份，改一邊忘另一邊會被 round-trip 測試抓到
 ├── write.py      openpyxl 底層。只管怎麼把值放進格子而不弄壞範本，
 │                 處理合併格導向主格、複製工作表、百分比存實際小數
+├── read.py       反向：從填好的表3 xlsx 讀出勘查事實。含型別轉換、
+│                 空值正規化、case_overrides 的套用
 ├── formulas.py   活版的 Excel 公式字串
 ├── fill.py       決定每一格填什麼。live=True 寫公式、live=False 寫數值
 └── cli.py        串起 kernel 與 xlsxform，一行指令跑完整條鏈
 ```
+
+`read.py` 與 `write.py` 對稱，共用 `layout.py`。不另開一個套件放讀取，
+因為那份格位對映會變成有兩個使用者卻沒有共同歸屬，容易改一邊忘另一邊。
+
+`read.py` 輸出的是統一的勘查事實格式，與 `kernel/fixtures/*.json` 的 `segments`
+區塊同一個 schema。三種輸入格式（PDF、xlsx、未來的 OCR）都收斂到這一層。
+現有 `parser/` 的 `Table1.surveys` 就是同一件事，只是包裝不同，要接進來需要一個
+攤平的轉接函式。
+
+`raw` 與 `facts` 分開，`extras` 放不是評價細項但回填需要的附屬資訊
+（路名、土地改良勾選項目）。少了 `extras` 會掉字：reader 產出的 `raw` 是型別
+轉換後的數值，解析不出路名，第二次產出時那幾格會變空白（實測踩過）。
 
 分界線是「判斷 vs 運算」：優劣等級與修正百分比要翻基準表的級距與 5×5 矩陣並附
 依據，只能由 `kernel/` 算並寫成數值；加總、乘法、加權是機械運算，寫成 Excel
