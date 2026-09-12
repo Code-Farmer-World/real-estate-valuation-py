@@ -11,6 +11,7 @@ real-estate-valuation-py/            後端（本 repo）
 │   ├── workshops/                   工作坊教材
 │   └── reference/aws/               AWS Well-Architected
 ├── kernel/  parser/  pdfform/  api/ 四層，見下方分層界線
+├── xlsxform/                        回填官方 xlsx 範本（2026-09-12 新增）
 └── stress/                          壓力測試
 
 real-estate-valuation/               前端（另一個 repo）
@@ -126,6 +127,26 @@ parser/  ──→  api/  ──→  kernel/
 - **`pdfform/` 不 import `kernel/`。** 需要的計算函式（`appraise`、`classify`、
   `lookup`）由 `api/main.py` 以參數注入，相依方向由 api 決定。
 - **`parser/survey.py` 刻意不 import kernel**，避免 pdfform 反向依賴 api。
+- **`xlsxform/` 也不 import `kernel/`**，同 `pdfform/` 的理由。它接收已算好的
+  結果（duck typing，只依賴介面不依賴型別），相依方向由 `xlsxform/cli.py` 決定，
+  那是唯一同時知道兩邊的地方。
+
+### `xlsxform/` 的內部分工
+
+```
+xlsxform/
+├── layout.py     官方 xlsx 範本的格位對映。純資料無邏輯，全部是實測座標，
+│                 附 check_layout() 自我檢查（它抓的是「對映表打錯了」）
+├── write.py      openpyxl 底層。只管怎麼把值放進格子而不弄壞範本，
+│                 處理合併格導向主格、複製工作表、百分比存實際小數
+├── formulas.py   活版的 Excel 公式字串
+├── fill.py       決定每一格填什麼。live=True 寫公式、live=False 寫數值
+└── cli.py        串起 kernel 與 xlsxform，一行指令跑完整條鏈
+```
+
+分界線是「判斷 vs 運算」：優劣等級與修正百分比要翻基準表的級距與 5×5 矩陣並附
+依據，只能由 `kernel/` 算並寫成數值；加總、乘法、加權是機械運算，寫成 Excel
+公式讓局處填入個別因素後自動更新。權重兩版都寫數值，因為它含排序分級的判斷。
 
 ## 資料流
 

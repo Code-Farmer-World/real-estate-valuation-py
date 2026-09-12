@@ -124,9 +124,18 @@ cd real-estate-valuation-py-main
 .venv/bin/python -m parser.cli "../docs/official/real-estate-valuation/查估書表範本.pdf"
 .venv/bin/python -m parser.cli <pdf> 表4 --provenance
 
-# 產出三張填好的書表
+# 產出三張填好的書表（PDF，金山範本那條路）
 .venv/bin/python -m pdfform.cli <pdf> <輸出目錄>
+
+# 回填官方 xlsx 空白範本（樹林住宅那條路，2026-09-12 新增）
+.venv/bin/python -m xlsxform.cli --templates <範本目錄> --out <輸出目錄>
 ```
+
+`xlsxform.cli` 產出五個檔案：表3 一份（四張工作表，一個區段一張）、
+表5-1 與表4 各有活版（含 Excel 公式）與定版（純數值）。範本目錄指向官方三份
+空白 xlsx 所在的位置，那些檔案被根目錄 `.gitignore` 的 `*.xlsx` 排除，
+不在版控裡。`xlsxform` 的測試找不到範本時會整份 skip，可用環境變數
+`SHULIN_TEMPLATE_DIR` 指定位置。
 
 **只有 `kernel` 快到適合綁存檔 hook**（純邏輯零依賴）。其他三個都要實際解析
 PDF，每次 20–30 秒。
@@ -149,6 +158,7 @@ PDF，每次 20–30 秒。
 | 改動範圍 | 至少要跑 |
 | --- | --- |
 | `kernel/` | `pytest kernel -q` |
+| `xlsxform/` | `pytest xlsxform -q`，並用 `xlsxform.cli` 對範本實際產一次 |
 | `parser/` | `pytest parser -q`，並用 `parser.cli` 對範本實際跑一次 |
 | `pdfform/` | `pytest pdfform -q` |
 | `api/` | `pytest api -q` |
