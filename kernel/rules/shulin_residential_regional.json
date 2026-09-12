@@ -73,8 +73,8 @@
     "其他影響因素(8)"
   ],
   "moi_cap_ruleset": "附件24 影響住宅用地區域因素評價基準表",
-  "moi_cap_column": null,
-  "moi_cap_column_note": "本專案的 kernel/rules/moi_caps_regional.json 目前只編了附件24「２.影響商業用地區域因素評價基準表」，住宅用地那一份（附件24 第1表）尚未編碼。住宅用地不可套用商業用地的上限欄位，故此處留 null。check_ruleset() 會對 29 項全數發出 MOI_CAP_MISSING／MOI_CAP_NA 等 WARN，那是「合規尚未驗證」而不是「不予調整」，需補編住宅用地上限表後才能真正檢查查估辦法第20條第2項的合規性。",
+  "moi_cap_column": "普通住宅用地",
+  "moi_cap_column_note": "本案的用地類別是「普通住宅用地」（見 scope.land_use），對應內政部「影響住宅用地區域因素評價基準表」的第三欄。該表分高級／中級／普通／村里鄰四級，依附件註3，普通住宅用地係指環境品質不高、建築材料普通、區內除住宅外尚有店鋪事務所小工廠攤販等混雜使用、公共設施屬一般水準者。上限值編在 kernel/rules/moi_caps_regional.json，來源是新北市查估書表製作手冊第 5 章第 46 頁收錄的內政部基準表。",
   "table5_1_scope_note": "表5-1 備註載明「使用分區、建蔽率、容積率修正併同於比較法調查估價表宗地個別因素考量調整修正」，故 regional.land_control.zoning／building_coverage／floor_area_ratio 三項在表5-1 不作區域因素調整，移由表4 宗地個別因素處理。三項仍完整編碼於此，供勘查表判級與追溯之用，但填表時應排除。",
   "factors": [
     {

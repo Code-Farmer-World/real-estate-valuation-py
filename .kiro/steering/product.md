@@ -158,10 +158,10 @@ OCR 是三者中唯一會安靜給出錯誤結果的，所以若之後接 Amazon
 - 規則集有兩組區域因素（金山商業 `jinshan_commercial_regional`、樹林住宅
   `shulin_residential_regional`），個別因素只有金山商業一組
   （`jinshan_commercial_individual`）
-- 樹林那組的內政部合規性尚未驗證。`kernel/rules/moi_caps_regional.json` 只編了
-  附件24 的商業用地表，住宅用地那份（附件24 第1表）還沒編，而住宅用地不能套
-  商業用地的上限欄位。`check_ruleset()` 會對樹林 29 項全數發 WARN，那代表
-  「合規尚未驗證」而不是「不予調整」
+- 兩組區域因素規則集的內政部合規性都驗過了。`kernel/rules/moi_caps_regional.json`
+  同時收住宅用地與商業用地兩份最大影響範圍表，各分四級。
+  樹林那組 28 項全數在「普通住宅用地」欄的上限內，零超標；
+  「其他影響因素」在基準表上是空白格（未訂上限），回報 INFO
 - `api/main.py` 寫死預設規則集，上傳其他行政區的書表會用錯規則集審查而且不提示。
   表5-1 已解析出 `land_use`，但沒拿來選規則集
 - 比較標的的區域因素等級沿用比準地，因為官方範本只有一張表1，跨區段案件

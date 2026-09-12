@@ -97,6 +97,11 @@ python scripts/demo-review.py    # 審查模式：改壞兩格，算出每平方
    抄錯一個數字會紅。
 2. **計算正確性**（`kernel/tests/`，金山 Golden Case）
    同一套引擎跑金山商業用地案能逐格重現官方答案。
+2b. **內政部最大影響範圍**（`check_ruleset()` 的 `MOI_CAP_*`）
+   自訂的修正幅度不得逾越內政部訂定的上限（查估辦法第 20 條第 2 項，
+   新北手冊第 5 章第 42 頁也重申）。住宅用地與商業用地兩份上限表都編了，
+   樹林那組 28 項零超標。
+
 3. **回填完整性**（`xlsxform/tests/test_audit.py`）
    釘住三張表動過的座標、禁止覆寫範本印好的標籤，並禁止內部代號與不宜措辭
    洩漏到交付檔案（`percent`、`None`、「口頭指示」那類字串）。
@@ -137,8 +142,7 @@ npx playwright test --project=chromium        # 4 passed，其中 2 支要後端
 （xlsx 轉 PDF 已解決，見下方「轉 PDF 與驗算」）
 - `api/main.py` 的審查模式寫死 `DEFAULT_REGIONAL = "jinshan_commercial_regional"`，
   這是唯一會安靜給錯答案的地方
-- 住宅用地的內政部上限表（附件24 第1表）未編，所以 `check_ruleset()`
-  對 29 項全發 WARN。那代表合規性尚未驗證而不是不合規
+- 表5-1 的區域因素尚未回灌審查模式的表4
 - 表6（宗地市價）未實作
 
 ## 剩下的正確性風險

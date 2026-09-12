@@ -118,9 +118,19 @@ def _check_unit(f: Factor) -> list[Finding]:
     return []
 
 
+#: 基準表本身沒有訂上限的細項。這與「我們還沒編」是兩件事，
+#: 訊息要分得開，否則會把「表上就是空白」誤讀成我們的缺口。
+#: 「其他影響因素」在內政部住宅用地那份表上是空白格。
+MOI_CAP_NOT_SET = ("regional.other.other_factors",)
+
+
 def _check_moi_cap(f: Factor, land_use: str, caps: dict) -> list[Finding]:
     entry = caps["caps"].get(f.factor_id)
     if entry is None:
+        if f.factor_id in MOI_CAP_NOT_SET:
+            return [Finding("INFO", f.factor_id, "MOI_CAP_NOT_SET",
+                            f"內政部基準表對此細項未訂最大影響範圍（表上為空白格），"
+                            f"故無上限可驗。自訂表訂 {f.max_range}%")]
         return [Finding("WARN", f.factor_id, "MOI_CAP_MISSING",
                         "內政部最大影響範圍表查無此細項，無法驗證合規")]
     cap = entry.get(land_use)
@@ -128,9 +138,10 @@ def _check_moi_cap(f: Factor, land_use: str, caps: dict) -> list[Finding]:
         return [Finding("WARN", f.factor_id, "MOI_CAP_NA",
                         f"內政部規定 {land_use} 此項「不予考慮調整」，但自訂表仍訂了 {f.max_range}%")]
     if f.max_range > dec(cap):
+        appendix = caps["source"].get("appendix") if isinstance(caps["source"], dict) else None
         return [Finding("WARN", f.factor_id, "MOI_CAP_EXCEEDED",
                         f"自訂表最大修正幅度 {f.max_range}% 超出內政部 {land_use} 上限 {cap}%"
-                        f"（{entry['label']}，{caps['source']['appendix']}）。"
+                        f"（{entry['label']}{'，' + appendix if appendix else ''}）。"
                         f"依查估辦法第20條第2項應在上限內；本引擎僅警告不修正，"
                         f"以維持官方 Golden Case 可重現性。")]
     return []
