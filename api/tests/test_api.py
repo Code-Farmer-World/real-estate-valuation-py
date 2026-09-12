@@ -83,13 +83,30 @@ def test_missing_tables_returns_422(client):
 
 
 def test_rulesets_are_complete(client):
-    """兩套規則集都補完了：個別因素 19 項、區域因素 28 項。"""
+    """三套規則集都補完了。
+
+    改以 ruleset_id 為索引，不再假設每種 kind 只有一組。原本用 kind 當鍵，
+    在區域因素只有金山一組時可行；加入樹林住宅之後兩組都是 regional，
+    dict 生成式會被後者覆寫，測試會誤判成「金山有 29 項」。
+    """
     r = client.get("/api/rulesets")
     assert r.status_code == 200
-    by_kind = {x["kind"]: x for x in r.json()["data"]["rulesets"]}
-    assert by_kind["individual"]["factor_count"] == 19
-    assert by_kind["regional"]["factor_count"] == 28
-    assert by_kind["regional"]["status"] == "complete"
+    rulesets = r.json()["data"]["rulesets"]
+    by_id = {x["ruleset_id"]: x for x in rulesets}
+
+    expected = {
+        "jinshan-commercial-individual": ("individual", 19),
+        "jinshan-commercial-regional": ("regional", 28),
+        "shulin-residential-regional": ("regional", 29),
+    }
+    assert set(by_id) == set(expected), "規則集清單與預期不符：%s" % sorted(by_id)
+    for rid, (kind, count) in expected.items():
+        assert by_id[rid]["kind"] == kind, rid
+        assert by_id[rid]["factor_count"] == count, rid
+
+    # status 只有兩份區域因素規則集宣告了，個別因素那份沒有這個欄位。
+    assert by_id["jinshan-commercial-regional"]["status"] == "complete"
+    assert by_id["shulin-residential-regional"]["status"] == "complete"
 
 
 # ---------- 辨識 ----------
