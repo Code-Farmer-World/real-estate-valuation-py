@@ -25,6 +25,9 @@ stress/.tmp/
 *.pdf
 *.docx
 *.xlsx
+# 官方手冊的 OCR 全文也算官方文件內容（新北那份 8.7 萬字），比照處理。
+# 產生方式留在 scripts/ocr-manual.py，換檔案時重跑就好。
+docs/ocr/
 
 
 # ── 編輯器與作業系統 ──────────────────────────────────────
@@ -42,6 +45,7 @@ stress/.tmp/
 *.pptx
 *.key
 docs/pitch/
+docs/DEMO.md
 
 # 本機跑整合測試用的產出物（e2e/integration.spec.ts 的 SURVEY_XLSX 預設位置）
 tmp/

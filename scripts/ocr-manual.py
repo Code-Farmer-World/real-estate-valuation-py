@@ -15,7 +15,11 @@
 
 ## 產出怎麼用
 
-`docs/ocr/新北查估書手冊-OCR.md`。用途是**定位與搜尋**，
+輸出到 `../docs/ocr/新北查估書手冊-OCR.md`，也就是官方 PDF 旁邊，
+不進版控（`.gitignore` 有 `docs/ocr/`）。理由是它等同官方文件內容，
+比照 `*.pdf` 處理；有價值而該留在 repo 的是這支產生工具而不是產出。
+
+用途是**定位與搜尋**，
 不是引用來源。要據以填表或引條文時回去看原始 PDF 對應頁的圖，
 因為 OCR 會有錯字，表格的閱讀順序也會亂（按文字區塊座標排序，
 不是按表格邏輯）。
@@ -35,7 +39,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT.parent / "docs" / "official" / "real-estate-valuation" / "新北查估書手冊.pdf"
-OUT = ROOT / "docs" / "ocr" / "新北查估書手冊-OCR.md"
+OUT = ROOT.parent / "docs" / "ocr" / "新北查估書手冊-OCR.md"
 
 #: 200 dpi 是實測的平衡點。150 會讓小字的信心度掉到 0.5 以下，
 #: 300 讓每頁的辨識時間從 0.9 秒變 2 秒而正確率沒有明顯提升。
@@ -112,7 +116,8 @@ def main() -> int:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(HEADER.format(pages=total) + "\n" + "\n".join(parts), encoding="utf-8")
     print(f"完成 {total} 頁，{time.time() - t0:.0f} 秒")
-    print(f"{OUT.relative_to(ROOT)} 共 {len(OUT.read_text('utf-8')):,} 字")
+    # OUT 在 repo 之外（官方文件目錄），不能對 ROOT 取 relative_to
+    print(f"{OUT} 共 {len(OUT.read_text('utf-8')):,} 字")
     return 0
 
 
