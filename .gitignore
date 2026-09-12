@@ -42,3 +42,6 @@ stress/.tmp/
 *.pptx
 *.key
 docs/pitch/
+
+# 本機跑整合測試用的產出物（e2e/integration.spec.ts 的 SURVEY_XLSX 預設位置）
+tmp/
