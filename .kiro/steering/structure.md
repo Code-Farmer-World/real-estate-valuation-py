@@ -16,6 +16,14 @@ real-estate-valuation-py/            後端（本 repo）
 real-estate-valuation/               前端（另一個 repo）
 ```
 
+⚠️ **上面是完整型態，實際 checkout 可能少東西。** 2026-09-12 實測某台機器的後端
+repo 只有 `api/ kernel/ parser/ pdfform/ paths.py conftest.py requirements.txt`，
+沒有 `docs/`（在 workspace 外層）也沒有 `stress/`，而 `.kiro/` 只存在於 remote
+分支 `origin/morefoodq/hackathon-2026-09-11-rebased` 而沒有進 `main`。動手前先
+`list_directory` 確認，`.kiro/` 若不在工作目錄可用
+`git restore --source=<有它的 ref> -- .kiro` 取回。競賽規範 C6 要求 `/.kiro`
+必須在專案根目錄，這件事會影響交件資格，見 `competition.md`。
+
 ---
 
 ## 前端

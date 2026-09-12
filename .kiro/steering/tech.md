@@ -60,6 +60,34 @@ npm run format       # oxfmt src/
 FastAPI + uvicorn，PDF 辨識用 pdfplumber，產表用 reportlab。Python 3.13.7，
 虛擬環境在專案內的 `.venv/`。
 
+### ⚠️ 換機器時先確認這幾件事（2026-09-12 實測差異）
+
+這份文件其餘部分描述的是原始開發機。實際在別台機器上跑之前，先跑一次確認，
+不要假設環境相同。以下是 2026-09-12 在另一台機器上實測到的差異。
+
+| 項目 | 原始開發機 | 2026-09-12 這台 |
+| --- | --- | --- |
+| 後端資料夾名 | `real-estate-valuation-py-main` | `real-estate-valuation-py`（**沒有 `-main`**） |
+| 前端資料夾名 | `real-estate-valuation-main` | `real-estate-valuation` |
+| `.venv` 的 Python | 3.13.7 | **3.9.6**（Command Line Tools 的系統 python） |
+| `pytest` | 有，163 passed | **未安裝**，`python -m pytest` 直接失敗 |
+| `openpyxl` | 有 | **未安裝** |
+| `docs/`、`stress/` | 在後端 repo 內 | **不在**，`docs/` 在 workspace 外層 |
+
+實務影響與繞法：
+
+1. **任何寫死資料夾名的地方都會壞。** `.kiro/hooks/` 兩支 hook 原本寫死
+   `real-estate-valuation-py-main`，在這台機器上永遠不觸發，已改成兩種名稱都吃。
+   `私人筆記/驗證-樹林住宅.py` 也有同樣問題（`sys.path` 指向不存在的路徑導致
+   `import api` 失敗），已改成自動偵測。
+2. **`pytest` 沒裝時，`kernel` 的正確性改用 `check_ruleset()` 驗。** 它在
+   `kernel/src/validate.py`，純標準庫，不需要額外套件。
+3. **要讀 xlsx 而沒有 `openpyxl` 時，用標準庫繞過。** xlsx 本身是 zip 加 XML，
+   `zipfile` 搭 `xml.etree.ElementTree` 就能讀（用 regex 解析 sheet XML 會因為
+   自閉合的 `<c/>` 標籤與回溯而出錯，2026-09-12 實測踩過）。
+4. **`.venv` 是 3.9 時，`kernel` 仍可執行**（它用 `from __future__ import
+   annotations`，型別標註不在執行期求值）。但要留意 3.10 以後才有的語法不能加。
+
 ### 指令
 
 一律用 venv 內的 python，不要用系統或 conda 的：
@@ -124,3 +152,9 @@ PDF，每次 20–30 秒。
   **一律用絕對路徑，或在指令裡自己接 `cd`。**
 - 回傳的 exit code 不可靠（成功也可能回 1），要看實際輸出判斷。
 - 長輸出容易被截斷，先寫檔再讀比較可靠。
+- **殼是 zsh，內建 `echo` 預設會解釋反斜線轉義。** 檢查含字面 `\n` 的輸出（例如
+  hook 產生的 JSON）時不要用 `echo "$out"`，它會把 `\n` 印成真換行，看起來像
+  無效 JSON。改用 `printf '%s'` 或直接管線給下一個程式。2026-09-12 為此誤判過
+  兩輪，以為 hook 產出的 JSON 壞了。
+- **`eval "$cmd"` 若 `$cmd` 結尾有 `exit 0`，會結束整個 script**，後面的指令
+  不會執行。測 hook 的 command 時用 `bash -c "$cmd"` 包在子行程裡跑。

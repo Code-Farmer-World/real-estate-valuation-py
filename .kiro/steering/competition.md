@@ -32,6 +32,31 @@
 - **`/.kiro` 必須留在專案根目錄**，記錄 steering 與 hooks 的設定
 - **不得將 `/.kiro` 或其子資料夾加入 `.gitignore`**
 
+⚠️ **這一條是交件資格問題，不是內部慣例。** 交件檢查清單第 2 項就是它。
+2026-09-12 實測發現後端 repo 的 `.kiro/` 只存在於 remote 分支
+`origin/morefoodq/hackathon-2026-09-11-rebased`，`main` 沒有，工作目錄也沒有。
+若直接推 `main` 交件就等於少交這一項。
+
+接手或換機器時先跑這兩行確認，前後端兩個 repo 都要查：
+
+```bash
+git ls-files | grep -c '^\.kiro'      # 應大於 0
+grep -n kiro .gitignore               # 應無輸出
+```
+
+工作目錄沒有 `.kiro/` 時從有它的 ref 取回：
+
+```bash
+git restore --source=origin/morefoodq/hackathon-2026-09-11-rebased -- .kiro
+```
+
+另外 `.kiro/hooks/` 裡的 hook 是由 IDE 在 **workspace 根目錄**執行，不是在 repo
+內執行。這代表兩件事：一是 hook 裡的相對路徑要從 workspace 根算起（含 repo
+資料夾名，而資料夾名有無 `-main` 後綴會因機器而異）；二是在 workspace 根跑
+`git` 指令會失敗，因為根目錄不是 git repo（前後端各自是獨立 repo，分別在子目錄）。
+2026-09-12 發現 `guard-secrets-before-commit.json` 就是踩到第二點而靜默失效，
+錯誤被 `2>/dev/null` 吞掉後永遠回報「沒有可疑檔案」。
+
 ---
 
 ## 部署時要先解決的技術問題
