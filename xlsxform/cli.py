@@ -31,10 +31,12 @@ from kernel.src.compute import (
     similarity_and_weights,
     trial_price,
 )
+from kernel.src.evidence import build_evidence
 from kernel.src.ruleset import load_ruleset
 from kernel.src.validate import check_ruleset, errors
 
 from . import fill, layout
+from .evidence_sheet import add_evidence_sheet
 from .read import apply_case_overrides, read_table3
 from .write import duplicate_sheet, load_template, save, the_visible_sheet
 
@@ -104,9 +106,19 @@ def compute_all(facts: dict) -> dict:
 
     bcp = benchmark_comparison_price([trials[s] for s in comps], [weights[s] for s in comps])
 
+    evidence = build_evidence(
+        rs,
+        t5,
+        excluded=tuple(facts["excluded_from_regional_subtotal"]),
+        not_applicable=tuple(facts["not_applicable_factors"]),
+        raw_by_segment={seg: d.get("raw", {}) for seg, d in facts["segments"].items()},
+        overrides=facts.get("case_overrides"),
+    )
+
     return {
         "ruleset": rs,
         "table5_1": t5,
+        "evidence": evidence,
         "table4": {
             "benchmark": facts["benchmark"],
             "comparables": comps,
@@ -150,6 +162,15 @@ def write_table5(facts: dict, computed: dict, template: Path, out: Path, *, live
         case_id=facts["case_id"],
         example_no=example_no,
         live=live,
+    )
+    # 官方書表只有數字，沒有地方寫「這一格為什麼是這個值」。另開一張表把依據
+    # 攤出來，與書表放在同一個檔案，審查或訴願時不會分家。
+    add_evidence_sheet(
+        wb,
+        computed["evidence"],
+        case_id=facts["case_id"],
+        ruleset_id=computed["table5_1"].ruleset_id,
+        notes=[n for n in (facts.get("not_applicable_reason"), facts.get("excluded_reason")) if n],
     )
     return save(wb, out), counts
 
