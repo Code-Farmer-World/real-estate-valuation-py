@@ -15,7 +15,18 @@
 
 | 文件 | 內容 |
 |---|---|
+| [`CHANGELOG.md`](CHANGELOG.md) | 版本紀錄。v1.0.0 交件版的範圍、已驗證的數字、四層驗證、重要修正、沒做的部分 |
+| [`docs/DEMO.md`](docs/DEMO.md) | 五分鐘 Demo 腳本與 13 條預備問答，每條都附得出驗證指令 |
+| [`docs/FILLING-BASIS.md`](docs/FILLING-BASIS.md) | 填表依據逐條對照。每一格的手冊條文依據，跟主辦方對答案用這份 |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 架構決策：確定性與適應性的權衡、四層結構與各層的變動成本 |
 | [`docs/ROBUSTNESS_AUDIT.md`](docs/ROBUSTNESS_AUDIT.md) | 穩健性稽核：壓力測試結果、寫死與彈性規則盤點、修正優先序、調整點索引 |
+
+一鍵驗收，七步約兩分半（後端測試、規則集對照官方基準表、產出書表、
+回填盤點、十項自我驗證、轉 PDF 與活版公式驗算、前端測試與 build）：
+
+```bash
+./scripts/verify-all.sh
+```
 
 ## 內部分工
 
