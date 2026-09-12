@@ -481,8 +481,11 @@ def build_table5_1(
                     factor_id=fid,
                     segment=seg,
                     grade=None,
-                    label="-",
-                    reason="本案不適用，書表填「-」（不作評定，非等級為 0）",
+                    # 優劣等級是兩欄：左欄級數、右欄等級文字（新北查估書表製作
+                    # 手冊第 5 章第 42 頁）。不適用時題目自己填的是「- 無」，
+                    # 級數欄「-」而文字欄「無」，所以這裡的 label 是「無」。
+                    label="無",
+                    reason="本案不適用，書表級數欄填「-」、等級文字欄填「無」（不作評定，非等級為 0）",
                     source_page=f.source_page,
                     applicable=False,
                     value=facts[fid],

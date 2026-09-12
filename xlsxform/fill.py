@@ -70,7 +70,7 @@ def fill_table5_1(
 
     回傳各類格子的實際寫入數，供呼叫端與預期格數比對。
     """
-    counts = {"grades": 0, "corrections": 0, "subtotals": 0, "totals": 0}
+    counts = {"grades": 0, "grade_labels": 0, "corrections": 0, "subtotals": 0, "totals": 0}
 
     put(ws, layout.TABLE5_1_CASE_ID, case_id)
 
@@ -88,11 +88,19 @@ def fill_table5_1(
         if seg in example_no:
             put(ws, layout.TABLE5_1_EXAMPLE_NO[i], example_no[seg])
 
-    # 116 格優劣等級。不適用者填「-」，那是 GradeCell.text 決定的。
+    # 優劣等級是兩欄：級數與等級文字（新北手冊第 5 章第 42 頁）。
+    # 116 格級數（不適用者填「-」，那是 GradeCell.text 決定的）
+    # 加 116 格等級文字（「優」「稍優」…，不適用者填「無」）。
+    label_cols = [layout.TABLE5_1_GRADE_LABEL_COL["benchmark"]] + [
+        layout.TABLE5_1_GRADE_LABEL_COL[i] for i in range(len(result.comparables))
+    ]
     for row, fid in layout.TABLE5_1_FACTOR_ROWS.items():
-        for col, seg in zip(grade_cols, segments):
-            put(ws, f"{col}{row}", result.grade(seg, fid).text)
+        for col, label_col, seg in zip(grade_cols, label_cols, segments):
+            cell = result.grade(seg, fid)
+            put(ws, f"{col}{row}", cell.text)
             counts["grades"] += 1
+            put(ws, f"{label_col}{row}", cell.label)
+            counts["grade_labels"] += 1
 
     # 87 格修正百分比
     for row, fid in layout.TABLE5_1_FACTOR_ROWS.items():

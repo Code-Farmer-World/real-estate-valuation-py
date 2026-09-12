@@ -106,18 +106,22 @@ def verify_outputs(
         "; ".join(layout_problems) if layout_problems else "格位對映與規則集的細項一致",
     )
 
-    # 格數
+    # 格數。優劣等級是兩欄：級數與等級文字（新北手冊第 5 章第 42 頁），
+    # 所以 116 個細項格對應 232 格。只檢級數會漏掉整個文字欄。
     grade_cols = ["C"] + [layout.TABLE5_1_GRADE_COL[i] for i in range(len(comparables))]
+    label_cols = [layout.TABLE5_1_GRADE_LABEL_COL["benchmark"]] + [
+        layout.TABLE5_1_GRADE_LABEL_COL[i] for i in range(len(comparables))
+    ]
     blanks = [
         f"{c}{row}"
         for row in layout.TABLE5_1_FACTOR_ROWS
-        for c in grade_cols
+        for c in grade_cols + label_cols
         if t5[f"{c}{row}"].value in (None, "")
     ]
     r.add(
-        "表5-1 的 116 格優劣等級皆已填寫",
+        "表5-1 的 116 格優劣等級（級數與等級文字兩欄）皆已填寫",
         not blanks,
-        f"空白格：{blanks[:5]}" if blanks else "116 格全數有值",
+        f"空白格：{blanks[:5]}" if blanks else "232 格全數有值（116 級數 ＋ 116 等級文字）",
     )
 
     # 群組小計 == 各細項之和（活版 =SUM(...) 的關係）

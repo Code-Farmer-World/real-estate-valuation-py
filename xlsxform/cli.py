@@ -84,7 +84,13 @@ def main(argv: list[str] | None = None) -> int:
             live=live,
         )
         produced.append(p)
-        expected = {"grades": 116, "corrections": 87, "subtotals": 24, "totals": 3}
+        expected = {
+            "grades": 116,
+            "grade_labels": 116,
+            "corrections": 87,
+            "subtotals": 24,
+            "totals": 3,
+        }
         if counts != expected:
             raise SystemExit(f"表5-1 寫入格數 {counts} 與預期 {expected} 不符")
 

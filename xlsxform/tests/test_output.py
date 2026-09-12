@@ -111,12 +111,49 @@ def test_layout_factor_ids_match_ruleset():
 
 
 def test_table5_1_cell_counts(built):
+    """優劣等級是兩欄：級數與等級文字。
+
+    新北查估書表製作手冊第 5 章第 42 頁：「左欄填載各該地價區段之優劣等級
+    級數，右欄填載優劣等級細項」。表頭 C4:D4 是合併格所以看起來像一欄，
+    細項列的 C 與 D 各自獨立。先前只填級數，漏了 116 格等級文字。
+    """
     assert built["table5_final_counts"] == {
         "grades": 116,
+        "grade_labels": 116,
         "corrections": 87,
         "subtotals": 24,
         "totals": 3,
     }
+
+
+def test_table5_1_grade_labels_pair_with_the_grade_numbers(built):
+    """每一格級數旁邊都要有對應的等級文字，而且文字要與規則集的語彙一致。
+
+    官方已填好的金山範本逐列都是「1 優」「3 普通」「5 劣」這種兩欄形式，
+    題目的表5-1 在其他影響因素那列自己填的是「- 無」。
+    """
+    ws = _sheet(built["table5_final"], layout.SHEET_TABLE5_1)
+    pairs = [
+        (layout.TABLE5_1_GRADE_COL["benchmark"], layout.TABLE5_1_GRADE_LABEL_COL["benchmark"])
+    ] + [
+        (layout.TABLE5_1_GRADE_COL[i], layout.TABLE5_1_GRADE_LABEL_COL[i])
+        for i in range(len(COMPS))
+    ]
+
+    seen = 0
+    for row in layout.TABLE5_1_FACTOR_ROWS:
+        for grade_col, label_col in pairs:
+            grade = _v(ws, f"{grade_col}{row}")
+            label = _v(ws, f"{label_col}{row}")
+            assert grade is not None, f"{grade_col}{row} 級數空白"
+            assert label, f"{label_col}{row} 等級文字空白"
+            if grade == "-":
+                # 不適用。題目自己填的是「- 無」
+                assert label == "無", f"{label_col}{row} 應為「無」，實得 {label!r}"
+            else:
+                assert label != "-", f"{label_col}{row} 不該是「-」"
+            seen += 1
+    assert seen == 116
 
 
 def test_table5_1_header(built):
