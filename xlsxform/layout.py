@@ -218,6 +218,64 @@ TABLE3_CELL_MAIN_ROAD_WIDTH = "J11"
 #: 區段內道路平均寬度：D12 是標籤，H12 印「M」，值填 G12。
 TABLE3_CELL_AVG_ROAD_WIDTH = "G12"
 
+#: 表3 每個細項的優劣等級欄與總級數欄。
+#:
+#: 新北市查估書表製作手冊第 3 章第 25 頁的「土地使用管制填載範例」顯示，
+#: 每個細項名稱左邊有兩個窄欄，填「優劣等級／總級數」，
+#: 例如「1 2 都市計畫(內外) 內」、「3 3 有無限制建築 有(限制整體開發)」、
+#: 「5 5 建蔽率 尚未發佈」。
+#:
+#: 這也是為什麼手冊第 5 章第 42 頁要求表5-1 的等級「應與地價區段勘查表內
+#: 所調查之基本資料及優劣等級相符」：勘查表本身就有等級欄。
+#:
+#: 表3 是雙欄版面。左半的大標籤在 A 欄，等級在 B、總級數在 C；
+#: 右半的大標籤在 L 欄，等級在 M、總級數在 N。B 與 M 同寬（3.625），
+#: 兩邊完全對稱。跨多列的細項（例如大型車站四列）等級欄是合併格，
+#: 這裡記主格座標，`put()` 會自動導向。
+#:
+#: 「其他影響因素」沒有等級欄，它的 L40:N41 是整個合併掉的標籤格。
+TABLE3_GRADE_CELLS = {
+    # 左半：土地使用管制
+    "regional.land_control.urban_plan": ("B4", "C4"),
+    "regional.land_control.zoning": ("B5", "C5"),
+    "regional.land_control.building_coverage": ("B6", "C6"),
+    "regional.land_control.floor_area_ratio": ("B7", "C7"),
+    "regional.land_control.build_prohibition": ("B8", "C8"),
+    "regional.land_control.build_restriction": ("B9", "C9"),
+    # 左半：交通運輸
+    "regional.transport.main_road_width": ("B11", "C11"),
+    "regional.transport.avg_road_width": ("B12", "C12"),
+    "regional.transport.large_station": ("B13", "C13"),
+    "regional.transport.bus_stop": ("B17", "C17"),
+    "regional.transport.interchange": ("B19", "C19"),
+    "regional.transport.road_development": ("B23", "C23"),
+    # 左半：自然條件
+    "regional.nature.sunlight": ("B24", "C24"),
+    "regional.nature.view": ("B25", "C25"),
+    "regional.nature.slope": ("B26", "C26"),
+    "regional.nature.drainage": ("B27", "C27"),
+    "regional.nature.terrain": ("B28", "C28"),
+    # 左半：土地改良
+    "regional.land_improvement.site_improvement": ("B31", "C31"),
+    # 左半：公共建設（學校、市場、公園）
+    "regional.public.school": ("B35", "C35"),
+    "regional.public.market": ("B39", "C39"),
+    "regional.public.park": ("B42", "C42"),
+    # 右半：公共建設（觀光遊憩、停車場地、服務性設施）
+    "regional.public.tourism": ("M4", "N4"),
+    "regional.public.parking": ("M6", "N6"),
+    "regional.public.service_facility": ("M8", "N8"),
+    # 右半：特殊設施
+    "regional.special.utility": ("M14", "N14"),
+    "regional.special.funeral": ("M18", "N18"),
+    "regional.special.waste": ("M22", "N22"),
+    # 右半：環境污染
+    "regional.pollution.environmental": ("M25", "N25"),
+}
+
+#: 表3 上沒有等級欄的細項。範本把它的標籤格連同等級欄一起合併掉了。
+TABLE3_NO_GRADE_CELL = ("regional.other.other_factors",)
+
 #: 土地改良的勾選文字。範本印的是 □，要勾的改成 ■。
 TABLE3_CELL_IMPROVEMENT_LINE1 = "E31"
 TABLE3_CELL_IMPROVEMENT_LINE2 = "E32"

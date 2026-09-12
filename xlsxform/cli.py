@@ -72,6 +72,7 @@ def main(argv: list[str] | None = None) -> int:
             facts,
             find_template(args.templates, "table3"),
             args.out / f"{OUTPUT_STEM['table3']}-filled.xlsx",
+            computed,
         )
     )
 

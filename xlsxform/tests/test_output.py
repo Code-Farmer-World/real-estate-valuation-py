@@ -59,7 +59,9 @@ def built(tmp_path_factory):
     out = tmp_path_factory.mktemp("forms")
     computed = compute_all(FACTS)
     paths = {
-        "table3": write_table3(FACTS, find_template(TEMPLATES, "table3"), out / "t3.xlsx"),
+        "table3": write_table3(
+            FACTS, find_template(TEMPLATES, "table3"), out / "t3.xlsx", computed
+        ),
     }
     for live, tag in ((True, "live"), (False, "final")):
         p, counts = write_table5(

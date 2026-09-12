@@ -479,6 +479,7 @@ def _write_all_forms(facts: dict[str, Any], computed: dict[str, Any], work: Path
             facts,
             find_template(paths.TEMPLATE_DIR, "table3"),
             work / f"{OUTPUT_STEM['table3']}-filled.xlsx",
+            computed,
         )
     ]
     for live, tag in ((True, "live"), (False, "final")):

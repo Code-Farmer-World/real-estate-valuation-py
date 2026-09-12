@@ -270,12 +270,26 @@ def fill_table4(ws: Worksheet, data: dict[str, Any], *, live: bool) -> None:
 _PERCENT_FIELDS = layout.TABLE3_PERCENT_FIELDS
 
 
-def fill_table3(ws: Worksheet, segment: str, seg_data: dict[str, Any], *, year_period: str) -> None:
+def fill_table3(
+    ws: Worksheet,
+    segment: str,
+    seg_data: dict[str, Any],
+    *,
+    year_period: str,
+    grades: dict[str, Any] | None = None,
+    grade_counts: dict[str, int] | None = None,
+) -> None:
     """填一張表3（一個區段）。
 
     圈選類欄位（大型車站、站牌、交流道、學校、市場、公園、觀光遊憩、停車場地、
     服務性設施、電業、殯葬、廢棄物、環境污染）本案全部未勾、距離空白，
-    維持範本原狀不動，因為「沒有勾選」本身就是事實。
+    維持範本原狀不動，因為「沒有勾選」本身就是事實。它們的優劣等級照填，
+    因為「無」在基準表上是一個有效的等級（多數是最劣級）。
+
+    `grades` 是 {factor_id: 填進等級欄的文字}，`grade_counts` 是
+    {factor_id: 總級數}。每個細項名稱左邊有兩個窄欄要填這兩個值，
+    依新北市查估書表製作手冊第 3 章第 25 頁的填載範例。
+    兩者都沒給就跳過等級欄（讀取端 round-trip 時不需要重填）。
     """
     facts = seg_data["facts"]
     raw = seg_data.get("raw", {})
@@ -322,6 +336,40 @@ def fill_table3(ws: Worksheet, segment: str, seg_data: dict[str, Any], *, year_p
     put(ws, layout.TABLE3_CELL_BUILDING_DENSITY, only.get("building_density"))
     put(ws, layout.TABLE3_CELL_BUILDING_TYPE, only.get("building_type"))
     _fill_land_use(ws, only.get("land_use_current"))
+
+    _fill_grades(ws, segment, grades, grade_counts)
+
+
+def _fill_grades(
+    ws: Worksheet,
+    segment: str,
+    grades: dict[str, Any] | None,
+    grade_counts: dict[str, int] | None,
+) -> None:
+    """填每個細項的優劣等級與總級數。
+
+    範本上這兩欄在細項名稱左邊，窄窄的兩格（左半 B／C，右半 M／N）。
+    先前整批空白，因為只看得到「值欄」而沒注意到那兩欄。
+    """
+    if not grades and not grade_counts:
+        return
+
+    missing = []
+    for fid, (grade_cell, count_cell) in layout.TABLE3_GRADE_CELLS.items():
+        if grades is not None:
+            if fid in grades:
+                put(ws, grade_cell, grades[fid])
+            else:
+                missing.append(fid)
+        if grade_counts is not None and fid in grade_counts:
+            put(ws, count_cell, grade_counts[fid])
+
+    if missing:
+        raise ValueError(
+            f"{segment} 的表3 有 {len(missing)} 個細項缺優劣等級："
+            f"{sorted(missing)[:5]}。表5-1 的等級必須與勘查表相符"
+            f"（新北手冊第 5 章第 42 頁），所以這裡不能靜默留空。"
+        )
 
 
 def _road_name(raw: Any) -> str | None:

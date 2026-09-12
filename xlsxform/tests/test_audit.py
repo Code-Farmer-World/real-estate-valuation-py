@@ -73,13 +73,18 @@ TABLE4_EXPECTED = {
     "G32", "D34",
 }
 
-#: 表3 每個地價區段該動的 23 格。四張表結構相同，值不同。
-#: `E31`／`E32`（土地改良）與 `Q44`（土地利用現況）是覆寫勾選符號，
-#: 其餘 20 格是填入空白格。
+#: 表3 每個地價區段該動的 79 格。四張表結構相同，值不同。
+#:
+#: 23 格是量測值與勾選（`E31`／`E32` 土地改良與 `Q44` 土地利用現況是覆寫
+#: 勾選符號），另外 56 格是 28 個細項的優劣等級與總級數。
+#:
+#: 那 56 格在細項名稱左邊的兩個窄欄（左半 B／C，右半 M／N），
+#: 依新北市查估書表製作手冊第 3 章第 25 頁的填載範例。先前整批空白。
+#: 「其他影響因素」沒有等級欄，所以是 28 個細項而不是 29 個。
 TABLE3_EXPECTED = {
     # 年期、區段編號、區段範圍
     "B3", "G3", "L3",
-    # 土地使用管制六項
+    # 土地使用管制六項的量測值
     "H4", "H5", "H6", "H7", "H8", "H9",
     # 主要道路名稱與寬度、區段內道路平均寬度
     "G11", "J11", "G12",
@@ -91,6 +96,11 @@ TABLE3_EXPECTED = {
     "R42", "R43",
     # 土地利用現況勾選
     "Q44",
+} | {
+    # 28 個細項的優劣等級與總級數
+    cell
+    for pair in layout.TABLE3_GRADE_CELLS.values()
+    for cell in pair
 }
 
 #: 表5-1 的表頭與備註。細項的 116／87／24／3 格由 `write_table5()`
@@ -116,7 +126,9 @@ def built(tmp_path_factory):
     out = tmp_path_factory.mktemp("audit")
     computed = compute_all(FACTS)
     paths = {
-        "table3": write_table3(FACTS, find_template(TEMPLATES, "table3"), out / "t3.xlsx"),
+        "table3": write_table3(
+            FACTS, find_template(TEMPLATES, "table3"), out / "t3.xlsx", computed
+        ),
     }
     p, _ = write_table5(
         FACTS, computed, find_template(TEMPLATES, "table5"), out / "t5.xlsx", live=False
@@ -292,3 +304,50 @@ def test_demo_review_script_runs(tmp_path):
         "改壞了修正率但價差是 0，Demo 最關鍵那句話會沒有數字。"
         f"第二段輸出：\n{second}"
     )
+
+
+def test_table3_grades_match_table5_1(built):
+    """表3 的優劣等級必須與表5-1 相同。
+
+    新北市查估書表製作手冊第 5 章第 42 頁：「本表所填載之比準地地價區段與
+    各比較標的地價區段之優劣等級，應與地價區段勘查表內所調查之基本資料及
+    優劣等級相符」。兩邊同源（都來自 `computed["table5_1"]`），
+    這個測試確認實作沒有讓它們走岔。
+    """
+    import openpyxl
+
+    wb3 = openpyxl.load_workbook(built["table3"])
+    ws5 = openpyxl.load_workbook(built["table5"])[layout.SHEET_TABLE5_1]
+
+    grade_cols = {
+        FACTS["benchmark"]: layout.TABLE5_1_GRADE_COL["benchmark"],
+        **{seg: layout.TABLE5_1_GRADE_COL[i] for i, seg in enumerate(COMPS)},
+    }
+    row_of = {fid: row for row, fid in layout.TABLE5_1_FACTOR_ROWS.items()}
+
+    checked = 0
+    for seg in SEGMENTS:
+        ws3 = wb3[layout.TABLE3_SHEET_TITLE.format(segment=seg)]
+        for fid, (grade_cell, count_cell) in layout.TABLE3_GRADE_CELLS.items():
+            t3 = ws3[grade_cell].value
+            t5 = ws5[f"{grade_cols[seg]}{row_of[fid]}"].value
+            assert str(t3) == str(t5), (
+                f"{seg} 的「{fid}」表3 填 {t3!r} 而表5-1 填 {t5!r}，兩表不一致"
+            )
+            count = ws3[count_cell].value
+            assert isinstance(count, int) and 2 <= count <= 9, (
+                f"{seg} 的「{fid}」總級數是 {count!r}，應為 2 到 9 的整數"
+            )
+            checked += 1
+
+    assert checked == 28 * len(SEGMENTS)
+
+
+def test_table3_other_factors_has_no_grade_cell():
+    """其他影響因素在表3 沒有等級欄，它的標籤格把那兩欄合併掉了。
+
+    所以表3 是 28 個細項有等級，而表5-1 是 29 個細項都有等級。
+    """
+    for fid in layout.TABLE3_NO_GRADE_CELL:
+        assert fid not in layout.TABLE3_GRADE_CELLS
+    assert len(layout.TABLE3_GRADE_CELLS) == 28

@@ -136,15 +136,42 @@ def compute_all(facts: dict) -> dict:
     }
 
 
-def write_table3(facts: dict, template: Path, out: Path) -> Path:
+def write_table3(facts: dict, template: Path, out: Path, computed: dict | None = None) -> Path:
+    """填四張表3（每個地價區段一張）。
+
+    `computed` 給了就一併填每個細項的優劣等級與總級數（範本上細項名稱左邊
+    那兩個窄欄）。手冊要求表5-1 的等級與勘查表相符，所以兩邊的等級同源，
+    都來自 `computed["table5_1"]`。
+    """
     wb = load_template(template, out)
     ws = the_visible_sheet(wb, expect_title=layout.SHEET_TABLE3)
     segments = [facts["benchmark"]] + list(facts["comparables"])
     titles = [layout.TABLE3_SHEET_TITLE.format(segment=s) for s in segments]
     sheets = duplicate_sheet(wb, ws, titles)
+
+    counts = None
+    if computed is not None:
+        rs = computed["ruleset"]
+        counts = {
+            fid: rs[fid].grade_count
+            for fid in layout.TABLE3_GRADE_CELLS
+            if fid in rs.factor_ids
+        }
+
     for sheet, seg in zip(sheets, segments):
+        grades = None
+        if computed is not None:
+            t5 = computed["table5_1"]
+            grades = {
+                fid: t5.grade(seg, fid).text for fid in layout.TABLE3_GRADE_CELLS
+            }
         fill.fill_table3(
-            sheet, seg, facts["segments"][seg], year_period=facts["year_period"]
+            sheet,
+            seg,
+            facts["segments"][seg],
+            year_period=facts["year_period"],
+            grades=grades,
+            grade_counts=counts,
         )
     return save(wb, out)
 
