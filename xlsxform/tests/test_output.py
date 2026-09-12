@@ -259,6 +259,29 @@ def test_table4_given_values_are_copied(built):
         assert _v(final, f"{cond}{layout.TABLE4_ROW_SEGMENT}") == seg
 
 
+def test_table4_header_is_filled(built):
+    """表頭六格：估價基準日、案號、比準地宗地流水號、三個實例編號。
+
+    這六格題目都有給，先前漏填。逐格盤點產出檔案時才發現，所以留這個測試。
+    一律是文字：流水號 0003 被當數字就會掉前導零。
+    """
+    g = FACTS["table4_given"]
+    for final in (
+        _sheet(built["table4_final"], layout.SHEET_TABLE4),
+        _sheet(built["table4_live"], layout.SHEET_TABLE4),
+    ):
+        assert _v(final, layout.TABLE4_CELL_BASE_DATE) == str(g["appraisal_base_date"])
+        assert _v(final, layout.TABLE4_CELL_CASE_ID) == str(g["case_id"])
+        serial = _v(final, layout.TABLE4_CELL_BENCHMARK_SERIAL)
+        assert serial == str(g["benchmark_parcel_serial"])
+        assert serial.startswith("0"), "宗地流水號的前導零掉了，被當成數字了"
+
+        for i, seg in enumerate(COMPS):
+            assert _v(final, layout.TABLE4_EXAMPLE_NO_CELLS[i]) == str(
+                g["segments"][seg]["example_no"]
+            )
+
+
 def test_table4_individual_factor_rows_left_blank(built):
     """項目 7 到 25 一律留空，題目未提供宗地個別條件資料。"""
     final = _sheet(built["table4_final"], layout.SHEET_TABLE4)
@@ -337,6 +360,39 @@ def test_table3_records_original_floor_area_ratio(built):
         original = FACTS["segments"][seg]["raw"]["regional.land_control.floor_area_ratio"]
         assert _v(ws, "H7") == f"{original}%", seg
         assert FACTS["segments"][seg]["facts"]["regional.land_control.floor_area_ratio"] == 200
+
+
+def test_table3_keeps_printed_labels_and_writes_values_beside_them(built):
+    """建築密度與建築型態的值要填在 R 欄，Q 欄那個標籤不能被蓋掉。
+
+    先前誤把值寫進 Q42/Q43，結果「建築密度」「建築型態」兩個標籤被覆寫，
+    表格看起來就少了欄位名。
+    """
+    wb = openpyxl.load_workbook(built["table3"])
+    for seg in [FACTS["benchmark"]] + COMPS:
+        ws = wb[layout.TABLE3_SHEET_TITLE.format(segment=seg)]
+        only = FACTS["segments"][seg]["table3_only"]
+        assert _v(ws, "Q42") == "建築密度", f"{seg} 的標籤被覆寫了"
+        assert _v(ws, "Q43") == "建築型態", f"{seg} 的標籤被覆寫了"
+        assert _v(ws, layout.TABLE3_CELL_BUILDING_DENSITY) == only["building_density"]
+        assert _v(ws, layout.TABLE3_CELL_BUILDING_TYPE) == only["building_type"]
+
+
+def test_table3_land_use_is_marked(built):
+    """土地利用現況要把勾選的 ○ 改成 ●，未勾的維持 ○。
+
+    P001-00 勾商業用與住宅用，其餘三段只勾住宅用。
+    「●住宅用」不可以誤中「○住商混合」。
+    """
+    wb = openpyxl.load_workbook(built["table3"])
+    for seg in [FACTS["benchmark"]] + COMPS:
+        ws = wb[layout.TABLE3_SHEET_TITLE.format(segment=seg)]
+        text = _v(ws, layout.TABLE3_CELL_LAND_USE) or ""
+        expect = FACTS["segments"][seg]["table3_only"]["land_use_current"]
+        assert text.count("●") == len(expect), seg
+        for name in expect:
+            assert f"●{name}" in text, f"{seg} 少勾 {name}"
+        assert "○住商混合" in text, f"{seg} 誤勾了住商混合"
 
 
 def test_table3_improvement_checkboxes_match_fact_count(built):

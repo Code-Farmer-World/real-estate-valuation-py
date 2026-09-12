@@ -148,6 +148,9 @@ def fill_table4(ws: Worksheet, data: dict[str, Any], *, live: bool) -> None:
         given[seg]           題目已給：normal_unit_price、transaction_date、
                              date_adjustment_pct、adjusted_unit_price、parcel、example_no
         benchmark_parcel     比準地地號
+        appraisal_base_date  估價基準日（表頭 L1）
+        case_id              案號（表頭 P1）
+        benchmark_parcel_serial  比準地宗地流水號（F2）
         regional_pct[seg]    區域因素調整百分率（我們算的）
         abs_sum_pct[seg]     調整百分率絕對值加總
         similarity[seg]      價格形成因素之相近程度
@@ -165,6 +168,15 @@ def fill_table4(ws: Worksheet, data: dict[str, Any], *, live: bool) -> None:
 
     bcol = layout.TABLE4_COND_COL["benchmark"]
 
+    # 表頭。都存成文字：估價基準日是民國日期，宗地流水號 0003 開頭那個 0
+    # 一旦被當數字就會掉。
+    if data.get("appraisal_base_date") is not None:
+        put(ws, layout.TABLE4_CELL_BASE_DATE, str(data["appraisal_base_date"]))
+    if data.get("case_id") is not None:
+        put(ws, layout.TABLE4_CELL_CASE_ID, str(data["case_id"]))
+    if data.get("benchmark_parcel_serial") is not None:
+        put(ws, layout.TABLE4_CELL_BENCHMARK_SERIAL, str(data["benchmark_parcel_serial"]))
+
     # 比準地欄：只有地號與區段編號，沒有交易實例
     put(ws, f"{bcol}{layout.TABLE4_ROW_SEGMENT}", bench)
     if data.get("benchmark_parcel"):
@@ -174,6 +186,9 @@ def fill_table4(ws: Worksheet, data: dict[str, Any], *, live: bool) -> None:
         cond = layout.TABLE4_COND_COL[i]
         diff = layout.TABLE4_DIFF_COL[i]
         g = given[seg]
+
+        if g.get("example_no") is not None:
+            put(ws, layout.TABLE4_EXAMPLE_NO_CELLS[i], str(g["example_no"]))
 
         put(ws, f"{cond}4", g.get("parcel"))
         put_money(ws, f"{cond}{layout.TABLE4_ROW_NORMAL_UNIT_PRICE}", g.get("normal_unit_price"))
@@ -298,6 +313,7 @@ def fill_table3(ws: Worksheet, segment: str, seg_data: dict[str, Any], *, year_p
     only = seg_data.get("table3_only", {})
     put(ws, layout.TABLE3_CELL_BUILDING_DENSITY, only.get("building_density"))
     put(ws, layout.TABLE3_CELL_BUILDING_TYPE, only.get("building_type"))
+    _fill_land_use(ws, only.get("land_use_current"))
 
 
 def _road_name(raw: Any) -> str | None:
@@ -328,6 +344,33 @@ def checked_improvements(raw: Any) -> set[str]:
         for mark, name in re.findall(r"([■□])([^■□]*)", raw)
         if mark == "■" and name.strip()
     }
+
+
+def _fill_land_use(ws: Worksheet, names: Any) -> None:
+    """土地利用現況的圈選。範本 Q44 印的是 ○，把有勾的改成 ●。
+
+    整格是一段文字：「○商業用　○住宅用　○工業用　○住商混合　…○其他_____」。
+    比對時帶著 ○ 前綴一起比，才不會讓「○住宅用」誤中「○住商混合」。
+    """
+    if not names:
+        return
+    coord = layout.TABLE3_CELL_LAND_USE
+    current = cell(ws, coord).value
+    if not isinstance(current, str):
+        return
+
+    updated, missed = current, []
+    for name in names:
+        if f"○{name}" in updated:
+            updated = updated.replace(f"○{name}", f"●{name}")
+        else:
+            missed.append(name)
+    if missed:
+        raise ValueError(
+            f"土地利用現況有 {len(missed)} 個項目在範本 {coord} 找不到對應的「○」："
+            f"{missed}。範本的項目文字可能與勘查表不同，需重新核對。"
+        )
+    put(ws, coord, updated)
 
 
 def _fill_improvement(ws: Worksheet, raw: Any, *, expect_count: int | None = None) -> None:

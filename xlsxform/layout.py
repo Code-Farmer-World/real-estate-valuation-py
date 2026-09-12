@@ -130,6 +130,15 @@ TABLE4_DIFF_COL = {
     2: "R",
 }
 
+#: 表頭。標籤印在左邊那一格，值填在右邊：
+#: K1「估價基準日：」→ L1、O1「案號：」→ P1、
+#: D2「比準地：宗地流水號」→ F2、H2/L2/P2「實例編號：」→ J2/N2/R2。
+#: 這幾格題目都有給值，先前漏填（實測產出後逐格盤點才發現）。
+TABLE4_CELL_BASE_DATE = "L1"
+TABLE4_CELL_CASE_ID = "P1"
+TABLE4_CELL_BENCHMARK_SERIAL = "F2"
+TABLE4_EXAMPLE_NO_CELLS = {0: "J2", 1: "N2", 2: "R2"}
+
 TABLE4_ROW_NORMAL_UNIT_PRICE = 5
 TABLE4_ROW_TRANSACTION_DATE = 6
 TABLE4_ROW_ADJUSTED_UNIT_PRICE = 7
@@ -197,9 +206,15 @@ TABLE3_CELL_AVG_ROAD_WIDTH = "G12"
 TABLE3_CELL_IMPROVEMENT_LINE1 = "E31"
 TABLE3_CELL_IMPROVEMENT_LINE2 = "E32"
 
-#: 表3 專屬欄位（不在表5-1 的 29 項裡，但回填要填）
-TABLE3_CELL_BUILDING_DENSITY = "Q42"
-TABLE3_CELL_BUILDING_TYPE = "Q43"
+#: 表3 專屬欄位（不在表5-1 的 29 項裡，但回填要填）。
+#: Q42「建築密度」與 Q43「建築型態」是範本印好的標籤，值欄在右邊的
+#: R42:V42 與 R43:V43。先前誤填在 Q 欄，把標籤蓋掉了。
+TABLE3_CELL_BUILDING_DENSITY = "R42"
+TABLE3_CELL_BUILDING_TYPE = "R43"
+
+#: 土地利用現況：Q44:V44 是一整格圈選文字
+#: 「○商業用　○住宅用　○工業用…」，要勾的把 ○ 改成 ●。
+TABLE3_CELL_LAND_USE = "Q44"
 
 #: 表3 上以百分比形式記載的細項。寫入時要加 % 尾綴，讀取時要把 % 去掉。
 #: 寫入與讀取共用這一份宣告，先前只有 fill.py 有，讀取端若自己再寫一份會不同步。

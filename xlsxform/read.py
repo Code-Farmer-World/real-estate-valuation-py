@@ -183,6 +183,9 @@ def _read_sheet(ws: Worksheet, segment: str) -> tuple[dict[str, Any], list[dict[
                     cell(ws, layout.TABLE3_CELL_BUILDING_DENSITY).value
                 ),
                 "building_type": _to_text(cell(ws, layout.TABLE3_CELL_BUILDING_TYPE).value),
+                "land_use_current": _checked_land_use(
+                    cell(ws, layout.TABLE3_CELL_LAND_USE).value
+                ),
             },
             "raw": raw,
         },
@@ -191,6 +194,22 @@ def _read_sheet(ws: Worksheet, segment: str) -> tuple[dict[str, Any], list[dict[
 
 
 # ---------- 型別轉換 ----------
+
+
+#: 抓 ● 後面那個項目名。排掉空白、其他圈選符號與「其他_____」的底線，
+#: 所以「●其他_____」會讀成「其他」。
+_LAND_USE_CHECKED = re.compile(r"●([^\s○●_]+)")
+
+
+def _checked_land_use(value: Any) -> list[str]:
+    """從土地利用現況那一格讀出勾選了哪些項目。
+
+    範本印 ○，回填時改成 ●（見 fill._fill_land_use）。這裡是它的反向操作，
+    少了它 round-trip 會把勾選弄丟。
+    """
+    if not isinstance(value, str):
+        return []
+    return _LAND_USE_CHECKED.findall(value)
 
 
 def _to_text(value: Any) -> str | None:
