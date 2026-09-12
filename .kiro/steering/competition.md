@@ -40,9 +40,14 @@
 接手或換機器時先跑這兩行確認，前後端兩個 repo 都要查：
 
 ```bash
-git ls-files | grep -c '^\.kiro'      # 應大於 0
-grep -n kiro .gitignore               # 應無輸出
+git ls-files | grep -c '^\.kiro'                    # 應大於 0
+git check-ignore -v .kiro .kiro/README.md           # 應無輸出
 ```
+
+第二行要用 `git check-ignore` 問 git 本人，不要用 `grep kiro .gitignore`。
+本 repo 的 `.gitignore` 裡就有一段註解寫著「/.kiro 絕對不可加入本檔案」，
+grep 會抓到那段註解而發出假警報（2026-09-12 為此誤判過一次）。
+`git check-ignore` 回報的是實際生效的忽略規則，沒有輸出才是真的沒被忽略。
 
 工作目錄沒有 `.kiro/` 時從有它的 ref 取回：
 
