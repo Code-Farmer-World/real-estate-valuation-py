@@ -60,33 +60,48 @@ npm run format       # oxfmt src/
 FastAPI + uvicorn，PDF 辨識用 pdfplumber，產表用 reportlab。Python 3.13.7，
 虛擬環境在專案內的 `.venv/`。
 
-### ⚠️ 換機器時先確認這幾件事（2026-09-12 實測差異）
+### ⚠️ 換機器時先確認這幾件事（2026-09-12 實測並修復）
 
-這份文件其餘部分描述的是原始開發機。實際在別台機器上跑之前，先跑一次確認，
-不要假設環境相同。以下是 2026-09-12 在另一台機器上實測到的差異。
+這份文件其餘部分描述的是原始開發機。實際在別台機器上跑之前先確認，不要假設
+環境相同。以下是 2026-09-12 在另一台機器上遇到的差異，以及已經做的修復。
 
-| 項目 | 原始開發機 | 2026-09-12 這台 |
-| --- | --- | --- |
-| 後端資料夾名 | `real-estate-valuation-py-main` | `real-estate-valuation-py`（**沒有 `-main`**） |
-| 前端資料夾名 | `real-estate-valuation-main` | `real-estate-valuation` |
-| `.venv` 的 Python | 3.13.7 | **3.9.6**（Command Line Tools 的系統 python） |
-| `pytest` | 有，163 passed | **未安裝**，`python -m pytest` 直接失敗 |
-| `openpyxl` | 有 | **未安裝** |
-| `docs/`、`stress/` | 在後端 repo 內 | **不在**，`docs/` 在 workspace 外層 |
+| 項目 | 原始開發機 | 2026-09-12 這台 | 狀態 |
+| --- | --- | --- | --- |
+| 後端資料夾名 | `real-estate-valuation-py-main` | `real-estate-valuation`＋`-py` | hook 已改成兩種都吃 |
+| 前端資料夾名 | `real-estate-valuation-main` | `real-estate-valuation` | 同上 |
+| `.venv` 的 Python | 3.13.7 | **3.9.6**（Command Line Tools） | 已相容，見下方第 1 點 |
+| `docs/` 在哪 | 後端 repo 內 | workspace 外層 | 用 `VALUATION_DOC_DIR` 指過去 |
+| 完整測試 | 163 passed | **180 passed** | 已修復 |
 
-實務影響與繞法：
+**這台機器目前的跑法**（兩件事都要做，缺一個就會失敗）：
 
-1. **任何寫死資料夾名的地方都會壞。** `.kiro/hooks/` 兩支 hook 原本寫死
-   `real-estate-valuation-py-main`，在這台機器上永遠不觸發，已改成兩種名稱都吃。
-   `私人筆記/驗證-樹林住宅.py` 也有同樣問題（`sys.path` 指向不存在的路徑導致
-   `import api` 失敗），已改成自動偵測。
-2. **`pytest` 沒裝時，`kernel` 的正確性改用 `check_ruleset()` 驗。** 它在
-   `kernel/src/validate.py`，純標準庫，不需要額外套件。
-3. **要讀 xlsx 而沒有 `openpyxl` 時，用標準庫繞過。** xlsx 本身是 zip 加 XML，
-   `zipfile` 搭 `xml.etree.ElementTree` 就能讀（用 regex 解析 sheet XML 會因為
-   自閉合的 `<c/>` 標籤與回溯而出錯，2026-09-12 實測踩過）。
-4. **`.venv` 是 3.9 時，`kernel` 仍可執行**（它用 `from __future__ import
-   annotations`，型別標註不在執行期求值）。但要留意 3.10 以後才有的語法不能加。
+```bash
+cd real-estate-valuation-py
+export VALUATION_DOC_DIR="$(cd ../docs/official/real-estate-valuation && pwd)"
+.venv/bin/python -m pytest -q      # 180 passed，約 24 秒
+```
+
+`VALUATION_DOC_DIR` 是 `paths.py` 提供的覆寫點。官方 PDF 被根目錄 `.gitignore`
+的 `*.pdf` 排除（約 103MB），全新 clone 之後 `parser` 與 `pdfform` 的測試會
+因為找不到「查估書表範本.pdf」而失敗，設這個變數指向文件實際位置即可。
+
+1. **Python 3.9 的相容性已處理。** `parser/extract.py` 原本有三個模組層級型別
+   別名寫成 `str | None`，那是 3.10 才支援的執行期求值，而模組層級賦值在 import
+   時就執行，`from __future__ import annotations` 不保護那裡。結果是整個 `parser`
+   無法 import，`api` 與 `pdfform` 的測試在收集階段就以 `TypeError` 中斷。已改用
+   `typing.Optional`，語意等價、3.13 行為不變。**之後寫程式若要加模組層級的型別
+   別名，記得用 `Optional[X]` 而不是 `X | None`。** 函式註解不受此限。
+2. **requirements.txt 不能直接裝。** `fastapi==0.141.1` 需要 3.10 以上，整包會
+   失敗而且什麼都不會裝。這台機器實際裝的是相容版本：`fastapi 0.128.8`、
+   `reportlab 4.5.1`、`uvicorn 0.39.0`、`httpx 0.28.1`、`pytest 8.4.2`、
+   `openpyxl 3.1.5`。**沒有改 requirements.txt**，因為那份記錄的是 3.13 環境的
+   正確版本，不該為了單一台機器降版。
+3. **本機沒有任何 xlsx 轉 PDF 的工具。** LibreOffice、Excel、Numbers、pandoc、
+   weasyprint、wkhtmltopdf 全部沒有。要把填好的 xlsx 交成 PDF，得在有 Excel、
+   Numbers 或 Google Sheets 的地方另存，或改用 `reportlab` 自己畫版面。
+4. **要讀 xlsx 而沒有 `openpyxl` 時**，xlsx 本身是 zip 加 XML，`zipfile` 搭
+   `xml.etree.ElementTree` 就能讀。用 regex 解析 sheet XML 會因為自閉合的 `<c/>`
+   標籤與回溯而出錯，2026-09-12 實測踩過。
 
 ### 指令
 
