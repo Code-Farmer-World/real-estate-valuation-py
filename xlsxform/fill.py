@@ -342,7 +342,24 @@ def fill_table3(
     put(ws, layout.TABLE3_CELL_BUILDING_TYPE, only.get("building_type"))
     _fill_land_use(ws, only.get("land_use_current"))
 
+    _fill_absent_names(ws, facts)
     _fill_grades(ws, segment, grades, grade_counts)
+
+
+def _fill_absent_names(ws: Worksheet, facts: dict[str, Any]) -> None:
+    """本案沒有該設施的細項，「名稱：」欄填「無」。
+
+    手冊允許空白或填「無」，範例選擇填「無」。填了才分得出
+    「已勘查並確認沒有」與「漏填」。
+
+    只在事實明確是「無」（值為 None）時填。有值就不動，
+    因為那代表該設施存在而名稱由勘查資料提供。
+    """
+    for fid, cells in layout.TABLE3_ABSENT_NAME_CELLS.items():
+        if fid not in facts or facts[fid] is not None:
+            continue
+        for coord in cells:
+            put(ws, coord, layout.TABLE3_ABSENT_TEXT, keep_existing=True)
 
 
 def _fill_grades(

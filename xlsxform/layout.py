@@ -293,6 +293,32 @@ TABLE3_GRADE_CELLS = {
 #: 表3 上沒有等級欄的細項。範本把它的標籤格連同等級欄一起合併掉了。
 TABLE3_NO_GRADE_CELL = ("regional.other.other_factors",)
 
+#: 圈選類設施的「名稱：」欄。本案沒有該設施時填「無」。
+#:
+#: 新北市查估書表製作手冊第 3 章第 18 頁：「如無該設施請空白或填載『無』，
+#: 勿自行修改表單。」兩者都合規，而第 19 頁的填寫範例選擇填「無」
+#: （殯葬、廢棄物、環境污染那些欄位逐格寫「名稱：無」）。
+#:
+#: 填「無」比留空好，因為它把「已勘查並確認沒有」與「漏填」分開。
+#: 這正是這個系統要解決的問題之一。
+#:
+#: 一個細項可能有多個子項各自一格，例如殯葬分墓地、殯儀館、火葬場、納骨塔。
+#: 工商活動那組（S30／S32／S34／S36）是商業用地才評比的細項，住宅用地不填。
+TABLE3_ABSENT_NAME_CELLS = {
+    "regional.transport.bus_stop": ("F17",),
+    "regional.transport.interchange": ("F19",),
+    "regional.public.tourism": ("S4",),
+    "regional.public.parking": ("S6",),
+    "regional.public.service_facility": ("S8",),
+    "regional.special.utility": ("S14", "S16"),
+    "regional.special.funeral": ("S18", "S19", "S20", "S21"),
+    "regional.special.waste": ("S22", "S23", "S24"),
+    "regional.pollution.environmental": ("S25", "S26", "S27", "S28", "S29"),
+}
+
+#: 填在「名稱：」欄表示本案沒有該設施
+TABLE3_ABSENT_TEXT = "無"
+
 #: 土地改良的勾選文字。範本印的是 □，要勾的改成 ■。
 TABLE3_CELL_IMPROVEMENT_LINE1 = "E31"
 TABLE3_CELL_IMPROVEMENT_LINE2 = "E32"
