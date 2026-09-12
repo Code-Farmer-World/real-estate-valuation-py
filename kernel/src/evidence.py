@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any
 
+from .classify import unit_suffix
 from .ruleset import RuleSet
 
 #: 不計入群組小計的兩種原因，講法不同（書表上的填法也不同）
@@ -330,8 +331,7 @@ def _signed(pct: Decimal) -> str:
 def _value_with_unit(value: Any, unit: str | None) -> str:
     if value is None:
         return "無（未勾選或無此設施）"
-    suffix = {"m": "m", "m2": "㎡", "percent": "%"}.get(unit or "", "")
-    return f"{value}{suffix}"
+    return f"{value}{unit_suffix(unit)}"
 
 
 def _plain(value: Any) -> Any:

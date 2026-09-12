@@ -56,8 +56,18 @@ def _band_contains(band: dict, v: Decimal) -> bool:
     return lo is not None or hi is not None
 
 
+def unit_suffix(unit: str | None) -> str:
+    """把規則集裡的單位代號換成人看的符號。
+
+    `percent` 是內部代號（JSON 鍵名不放符號），印給人看要變成 `%`。
+    少了這一層轉換，判級依據會寫成「50percent 落在「50%以上未滿60%」」，
+    而那串字會出現在交付檔案的計算依據工作表上。
+    """
+    return {"m": "m", "m2": "㎡", "percent": "%"}.get(unit or "", "")
+
+
 def _band_desc(band: dict, unit: str | None) -> str:
-    u = {"m": "m", "m2": "m²", "percent": "%"}.get(unit or "", "")
+    u = unit_suffix(unit)
     lo, hi = band.get("min"), band.get("max")
     if "or_ranges" in band:
         parts = [_band_desc(r, unit) for r in band["or_ranges"]]
@@ -130,14 +140,14 @@ def _classify_numeric(factor: Factor, value: Any) -> Grade:
             if any(_band_contains(r, v) for r in b["or_ranges"]):
                 return Grade(
                     factor.factor_id, b["grade"], factor.label_of(b["grade"]),
-                    f"{value}{factor.unit or ''} 落在「{_band_desc(b, factor.unit)}」→ 第{b['grade']}級",
+                    f"{value}{unit_suffix(factor.unit)} 落在「{_band_desc(b, factor.unit)}」→ 第{b['grade']}級",
                     factor.source_page,
                 )
             continue
         if _band_contains(b, v):
             return Grade(
                 factor.factor_id, b["grade"], factor.label_of(b["grade"]),
-                f"{value}{factor.unit or ''} 落在「{_band_desc(b, factor.unit)}」→ 第{b['grade']}級",
+                f"{value}{unit_suffix(factor.unit)} 落在「{_band_desc(b, factor.unit)}」→ 第{b['grade']}級",
                 factor.source_page,
             )
 

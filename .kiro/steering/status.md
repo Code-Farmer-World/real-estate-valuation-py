@@ -52,7 +52,8 @@ cd real-estate-valuation-py && ./scripts/verify-all.sh
 2. **計算正確性**（`kernel/tests/`，金山 Golden Case）
    同一套引擎跑金山商業用地案能逐格重現官方答案。
 3. **回填完整性**（`xlsxform/tests/test_audit.py`）
-   釘住三張表動過的座標，並禁止覆寫範本印好的標籤。
+   釘住三張表動過的座標、禁止覆寫範本印好的標籤，並禁止內部代號與不宜措辭
+   洩漏到交付檔案（`percent`、`None`、「口頭指示」那類字串）。
 
 三層都做過突變驗證，故意改壞會紅。詳見 `decisions.md` 的「這個專案的錯誤分兩類」。
 
@@ -60,7 +61,7 @@ cd real-estate-valuation-py && ./scripts/verify-all.sh
 
 ```bash
 export VALUATION_DOC_DIR="$(cd ../docs/official/real-estate-valuation && pwd)"
-.venv/bin/python -m pytest -q -p no:warnings      # 353 passed
+.venv/bin/python -m pytest -q -p no:warnings      # 354 passed
 ```
 
 官方 xlsx 範本與題目 PDF 在 `../正式題目/`。API 用 `VALUATION_TEMPLATE_DIR` 覆寫。

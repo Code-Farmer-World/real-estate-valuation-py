@@ -198,3 +198,50 @@ def test_no_printed_label_is_overwritten_by_a_value(built):
                 f"{title} 的 {a.coord} 把範本內容 {a.template!r} 換成 {a.output!r}。"
                 f"那一格看起來是範本印好的標籤，值應該填在旁邊的格子。"
             )
+
+
+#: 不該出現在交付檔案上的字串。
+#:
+#: `percent` 是規則集裡的單位代號（JSON 鍵名不放符號），印給人看要變成 `%`。
+#: 少了轉換，判級依據會寫成「50percent 落在「50%以上未滿60%」」。
+#: 實際發生過，是逐格讀計算依據工作表才看到的。
+#:
+#: 「口頭指示」與「工作坊」是來源記錄的措辭。追溯要留，但交付書表上不適合
+#: 出現那種字,所以 `case_overrides` 的 `source` 寫「地價查估單位說明」,
+#: 完整出處記在 `note`（`note` 不進表格）。
+#:
+#: `None` 是 Python 的空值被字串化,代表某個欄位該有值而沒處理到。
+FORBIDDEN_IN_OUTPUT = ("percent", "口頭指示", "工作坊", "None", "nan")
+
+
+def _all_strings(path, titles=None):
+    import openpyxl
+
+    wb = openpyxl.load_workbook(path)
+    for ws in wb.worksheets:
+        if ws.sheet_state == "hidden":
+            continue
+        if titles is not None and ws.title not in titles:
+            continue
+        for row in ws.iter_rows():
+            for cell in row:
+                if isinstance(cell.value, str):
+                    yield ws.title, cell.coordinate, cell.value
+
+
+def test_no_internal_tokens_leak_into_the_delivered_files(built):
+    """交付檔案裡不能出現內部代號或不宜的措辭。
+
+    這些字串不會讓任何計算出錯,所以測試與自我驗證都不會有反應。
+    只有把檔案打開讀才看得到,而看到的人是收件的人。
+    """
+    found = []
+    for key in ("table3", "table5", "table4"):
+        for title, coord, text in _all_strings(built[key]):
+            for token in FORBIDDEN_IN_OUTPUT:
+                if token in text:
+                    found.append((key, title, coord, token, text[:60]))
+
+    assert not found, "交付檔案出現不該有的字串：" + "；".join(
+        f"{k} 的 {t}!{c} 含 {tok!r}（{s}）" for k, t, c, tok, s in found
+    )
