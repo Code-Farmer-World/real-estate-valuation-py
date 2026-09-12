@@ -108,6 +108,8 @@ real-estate-valuation-py-main/
 | POST | `/api/review` | 三層逐格比對 |
 | POST | `/api/forms` | 產出三張書表，回傳下載連結 |
 | GET | `/api/forms/{token}/{filename}` | 下載書表（回傳 PDF 本身，不走信封） |
+| POST | `/api/survey/xlsx` | 產出模式：上傳填好的表3 xlsx，算出表5-1 與表4，回傳依據鏈與檔案連結 |
+| GET | `/api/survey/{token}/{filename}` | 下載產出的 xlsx 與驗證報告（不套信封） |
 | GET | `/api/health` | 健康檢查 |
 
 ---
@@ -144,8 +146,15 @@ xlsxform/
 │                 空值正規化、case_overrides 的套用
 ├── formulas.py   活版的 Excel 公式字串
 ├── fill.py       決定每一格填什麼。live=True 寫公式、live=False 寫數值
-└── cli.py        串起 kernel 與 xlsxform，一行指令跑完整條鏈
+├── evidence_sheet.py  在產出的 xlsx 加一張「計算依據」工作表（114 列）
+├── verify.py     產出後自我驗證十項，把活版公式描述的關係套在定版數值上重算
+├── pipeline.py   組裝邏輯。**CLI 與 API 都走這裡**，唯一同時知道 kernel 與
+│                 xlsxform 的地方，相依方向由它決定
+└── cli.py        只做參數解析與輸出排版
 ```
+
+`api/` 從 `pipeline.py` 取用而不是自己組裝。一旦 API 自己算，
+「每個數字都指得回官方文件」的追溯鏈就斷在那一層。
 
 `read.py` 與 `write.py` 對稱，共用 `layout.py`。不另開一個套件放讀取，
 因為那份格位對映會變成有兩個使用者卻沒有共同歸屬，容易改一邊忘另一邊。

@@ -19,18 +19,19 @@ Vue 3.5 + TypeScript 6 + Vite 8，Pinia 4 管狀態，vue-router 5 做路由，
 axios 打 API。測試用 Vitest 5 與 Playwright。Lint 用 oxlint + eslint，
 格式用 oxfmt。
 
-### ⚠️ node 與 npm 不在系統 PATH 上
+### node 與 npm 的取得方式因機器而異
 
-沒有 nvm、沒有 homebrew node。可攜式 Node.js（v22.18.0）放在專案內的
-`.tools/`，**每次開新終端機都必須先設 PATH**，否則 `npm` 會因為 shebang
-找不到 node 而失敗：
+原始開發機沒有 nvm、沒有 homebrew node，可攜式 Node.js（v22.18.0）放在專案內的
+`.tools/`，每次開新終端機都要先設 PATH：
 
 ```bash
 cd real-estate-valuation-main
 export PATH="$PWD/.tools/bin:$PATH"
 ```
 
-`package.json` 的 `engines` 要求 `^22.18.0 || >=24.12.0`，`.tools` 內的版本符合。
+**2026-09-12 實測的另一台機器有 nvm 的 node v24.16.0，直接可用不必設 PATH。**
+`package.json` 的 `engines` 要求 `^22.18.0 || >=24.12.0`，兩者都符合。
+換機器時先 `node -v` 確認，不要假設要走 `.tools/`。
 
 ### 指令
 
@@ -171,7 +172,7 @@ PDF，每次 20–30 秒。
 | `parser/` | `pytest parser -q`，並用 `parser.cli` 對範本實際跑一次 |
 | `pdfform/` | `pytest pdfform -q` |
 | `api/` | `pytest api -q` |
-| 前端 `src/` | `npm run type-check` + `npx vitest run` |
+| 前端 `src/` | `npm run type-check` + `npx vitest run`（16 個測試） |
 | 前端 `e2e/` | `npx tsc --noEmit -p e2e/tsconfig.json` |
 
 跨層改動或不確定影響範圍時，跑後端全部 163 個 + 前端全部。
