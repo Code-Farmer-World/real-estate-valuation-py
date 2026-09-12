@@ -37,6 +37,7 @@ from kernel.src.validate import check_ruleset, errors
 
 from . import fill, layout
 from .evidence_sheet import add_evidence_sheet
+from .verify import verify_outputs
 from .read import apply_case_overrides, read_table3
 from .write import duplicate_sheet, load_template, save, the_visible_sheet
 
@@ -73,7 +74,8 @@ def find_template(templates_dir: Path, key: str) -> Path:
 def compute_all(facts: dict) -> dict:
     """跑完整條計算鏈。回傳給 fill 用的普通資料結構。"""
     rs = load_ruleset(facts["ruleset_regional"])
-    errs = errors(check_ruleset(rs))
+    findings = check_ruleset(rs)
+    errs = errors(findings)
     if errs:
         raise SystemExit(
             "規則集自檢有 ERROR，拒絕產表：\n" + "\n".join(str(e) for e in errs)
@@ -117,6 +119,10 @@ def compute_all(facts: dict) -> dict:
 
     return {
         "ruleset": rs,
+        "ruleset_findings": {
+            "errors": len(errs),
+            "warnings": len(findings) - len(errs),
+        },
         "table5_1": t5,
         "evidence": evidence,
         "table4": {
@@ -315,9 +321,48 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  比準地比較價格 {t4['benchmark_comparison_price']:,} 元/㎡")
     print(f"  比準地地價（第21條進位）{t4['benchmark_land_price']:,} 元/㎡")
     print()
+    print("═══ 自我驗證 ═══")
+    report = verify_outputs(
+        table5_final=args.out / f"{OUTPUT_STEM['table5']}-final.xlsx",
+        table5_live=args.out / f"{OUTPUT_STEM['table5']}-live.xlsx",
+        table4_final=args.out / f"{OUTPUT_STEM['table4']}-final.xlsx",
+        table4_live=args.out / f"{OUTPUT_STEM['table4']}-live.xlsx",
+        expected=facts["expected"],
+        comparables=t4["comparables"],
+        ruleset_findings=computed["ruleset_findings"],
+    )
+    for c in report.checks:
+        print(f"  {'✓' if c.passed else '✗'} {c.name}")
+        if c.detail:
+            print(f"      {c.detail}")
+    report_path = args.out / "verification-report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "case_id": facts["case_id"],
+                "ruleset_id": computed["table5_1"].ruleset_id,
+                "facts_source": facts.get("_read_from") or str(args.facts),
+                "premise": "表4 個別因素（項目7至25）題目未提供宗地個別條件資料，"
+                "依表4 註記由地價查估單位辦理，本次計算以 0% 計。",
+                **report.to_dict(),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    produced.append(report_path)
+
+    print()
     print("═══ 產出 ═══")
     for p in produced:
         print(f"  {p}")
+
+    if not report.passed:
+        print()
+        for line in report.summary_lines():
+            print(line)
+        return 1
     return 0
 
 
