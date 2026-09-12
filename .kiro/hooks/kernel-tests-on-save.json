@@ -4,11 +4,11 @@
     {
       "name": "存檔後跑規則引擎測試",
       "trigger": "PostFileSave",
-      "description": "修改規則引擎（kernel/ 的 Python 或規則集 JSON）後立即執行 90 個引擎測試。這套測試只花 0.5 秒，因為 kernel 是純邏輯零依賴、不碰 PDF。規則引擎是「每個數字都指得回官方文件」這個主張的核心，改錯會讓所有計算結果失真，所以值得每次存檔都驗。",
-      "matcher": "real-estate-valuation-py-main/kernel/.*\\.(py|json)$",
+      "description": "修改規則引擎（kernel/ 的 Python 或規則集 JSON）後立即執行引擎測試。這套測試只花 0.5 秒，因為 kernel 是純邏輯零依賴、不碰 PDF。規則引擎是「每個數字都指得回官方文件」這個主張的核心，改錯會讓所有計算結果失真，所以值得每次存檔都驗。註：後端資料夾名在不同機器上有無 -main 後綴的差異（2026-09-12 實測本機為 real-estate-valuation-py），matcher 與 command 都改為兩種都吃，否則 hook 永遠不會觸發。若該機器的 venv 沒裝 pytest，這個 hook 會失敗，屆時改跑 check_ruleset() 自檢。",
+      "matcher": "real-estate-valuation-py(-main)?/kernel/.*\\.(py|json)$",
       "action": {
         "type": "command",
-        "command": "cd real-estate-valuation-py-main && .venv/bin/python -m pytest kernel -q",
+        "command": "d=real-estate-valuation-py; [ -d \"$d\" ] || d=real-estate-valuation-py-main; cd \"$d\" && .venv/bin/python -m pytest kernel -q",
         "timeout": 60
       }
     }
