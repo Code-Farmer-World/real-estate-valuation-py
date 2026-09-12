@@ -186,7 +186,13 @@ python -m xlsxform.cli --facts kernel/fixtures/shulin_survey_facts.json \
 # 從填好的表3 xlsx 跑（本 spec 新增）
 python -m xlsxform.cli --from-xlsx <填好的表3.xlsx> \
     --templates ../正式題目 --out <目錄>
+
+# 回填完整性盤點：逐列比對範本與產出，看哪些格動了、哪些沒動
+python -m xlsxform.audit --templates ../正式題目 --out <上面的輸出目錄>
 ```
+
+改動格位對映之後跑一次 `audit`，逐列確認「未動的格」是本案沒有這一項
+而不是漏填。詳見 `.kiro/steering/decisions.md` 的「這個專案的錯誤分兩類」。
 
 `--from-xlsx` 需要一份「案件設定」提供 xlsx 裡沒有的資訊：案號、比準地是哪個
 區段、`case_overrides`、以及表4 已給的交易實例資料（正常單價、交易日期、
