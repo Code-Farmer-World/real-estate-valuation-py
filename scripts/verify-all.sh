@@ -35,27 +35,27 @@ ok() { printf '\033[32m✓\033[0m %s\n' "$1"; }
 export VALUATION_DOC_DIR="$DOCS"
 export VALUATION_TEMPLATE_DIR="$TEMPLATES"
 
-step "1/6 後端測試"
+step "1/7 後端測試"
 TEST_OUT="$($PY -m pytest -q -p no:warnings 2>&1 | tail -3)"
 echo "$TEST_OUT" | tail -1
 echo "$TEST_OUT" | grep -qE "[0-9]+ passed" || fail "後端測試沒通過"
 echo "$TEST_OUT" | grep -qE "failed|error" && fail "後端測試有失敗項"
 ok "後端測試通過"
 
-step "2/6 規則集對照官方基準表"
+step "2/7 規則集對照官方基準表"
 $PY -m pytest kernel/tests/test_ruleset_matches_official_pdf.py -q -p no:warnings 2>&1 | tail -1
 ok "29 個細項的矩陣與門檻與評價基準明細表逐格一致"
 
-step "3/6 產出三份書表"
+step "3/7 產出書表"
 $PY -m xlsxform.cli --templates "$TEMPLATES" --out "$OUT" | tail -14
 
-step "4/6 回填完整性盤點"
+step "4/7 回填完整性盤點"
 AUDIT="$($PY -W ignore -m xlsxform.audit --templates "$TEMPLATES" --out "$OUT" 2>&1)"
 echo "$AUDIT" | grep "小計：" | sed 's/^/   /'
 $PY -m pytest xlsxform/tests/test_audit.py -q -p no:warnings 2>&1 | tail -1
 ok "動過的格位與釘住的清單一致，沒有覆寫範本印好的標籤"
 
-step "5/6 自我驗證報告"
+step "5/7 自我驗證報告"
 $PY - "$OUT/verification-report.json" <<'PY'
 import json, sys
 r = json.load(open(sys.argv[1], encoding="utf-8"))
@@ -70,13 +70,24 @@ if passed != len(checks):
 PY
 ok "自我驗證全數通過"
 
+step "6/7 轉 PDF 與活版公式驗算"
+if $PY -c "from xlsxform.topdf import find_soffice; import sys; sys.exit(0 if find_soffice() else 1)" 2>/dev/null; then
+  $PY -W ignore -m xlsxform.topdf --out "$OUT" --pdf-dir "$OUT/PDF" | sed 's/^/  /'
+  $PY scripts/check_pdf_pages.py "$OUT/PDF" || fail "PDF 頁數不符"
+  ok "三份表轉出正確頁數"
+  $PY -m pytest xlsxform/tests/test_libreoffice_recalc.py -q -p no:warnings 2>&1 | tail -1
+  ok "活版公式用真實試算表引擎重算，結果與定版一致且無錯誤值"
+else
+  printf '   跳過：找不到 LibreOffice。安裝方式見 xlsxform/topdf.py 的模組說明\n'
+fi
+
 if [[ "$ONLY_BACKEND" == "1" ]]; then
   step "跳過前端（--backend）"
   printf '\n\033[32m全部通過\033[0m\n'
   exit 0
 fi
 
-step "6/6 前端"
+step "7/7 前端"
 [[ -n "$FRONTEND" ]] || fail "找不到 ../real-estate-valuation"
 cd "$FRONTEND"
 export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"

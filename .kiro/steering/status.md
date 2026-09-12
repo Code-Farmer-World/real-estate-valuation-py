@@ -16,6 +16,10 @@
 cd real-estate-valuation-py && ./scripts/verify-all.sh
 ```
 
+七步：後端測試、規則集對照官方基準表、產出書表、回填完整性盤點、
+十項自我驗證、轉 PDF 與活版公式驗算、前端測試與 build。
+任何一步失敗就中止並回非零。約兩分半。
+
 ## 轉 PDF 與驗算
 
 本機裝了 LibreOffice 26.2.6（`/Applications/LibreOffice.app`，官方 dmg，
@@ -29,7 +33,8 @@ python -m xlsxform.topdf --out ../交付        # xlsx 轉 PDF
 沒有快取值，所以在裝之前那件事完全沒驗過。
 測試在 `xlsxform/tests/test_libreoffice_recalc.py`，找不到 LibreOffice 就跳過。
 
-跑完會印一份摘要：後端測試、產出三份表、回填盤點、自我驗證、前端測試與 build。
+跑完會印一份摘要：後端測試、規則集對照官方基準表、產出書表、回填盤點、
+十項自我驗證、轉 PDF 與活版公式驗算、前端測試與 build。
 任何一項失敗就中止並回非零。錄影片或交接前跑這一支就夠。
 
 ## 已完成
