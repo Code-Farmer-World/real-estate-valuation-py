@@ -83,8 +83,9 @@ def test_only_transport_group_is_nonzero(seg, result):
 
 
 @pytest.mark.parametrize("seg", COMPS)
-def test_abs_sum_matches_verified_value(seg, result):
-    assert result.abs_sum_pct(seg) == Decimal(EXPECTED["abs_sum_pct"][seg])
+def test_regional_abs_sum_matches_verified_value(seg, result):
+    """Table5_1Result.abs_sum_pct() 是表5-1 內部的加總，不是表4 那一格。"""
+    assert result.abs_sum_pct(seg) == Decimal(EXPECTED["regional_abs_sum_pct"][seg])
 
 
 def test_subtotals_add_up_to_total(result):

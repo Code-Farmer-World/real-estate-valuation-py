@@ -48,7 +48,7 @@ SKIP_SUBTOTAL = EXCLUDED | NOT_APPLICABLE
 EXPECTED = FACTS["expected"]
 EXPECTED_TOTAL = {k: Decimal(v) for k, v in EXPECTED["total_correction_pct"].items()}
 EXPECTED_TRIAL = EXPECTED["trial_price"]
-EXPECTED_ABS_SUM = {k: Decimal(v) for k, v in EXPECTED["abs_sum_pct"].items()}
+EXPECTED_REGIONAL_ABS_SUM = {k: Decimal(v) for k, v in EXPECTED["regional_abs_sum_pct"].items()}
 
 ADJUSTED_PRICE = {
     seg: d["adjusted_unit_price"]
@@ -171,11 +171,12 @@ def test_trial_price_matches_verified_value(seg):
 
 
 @pytest.mark.parametrize("seg", COMPARABLES)
-def test_abs_sum_matches_verified_value(seg):
-    """調整百分率絕對值加總，決定比較標的權重。
+def test_regional_abs_sum_matches_verified_value(seg):
+    """表5-1 內部的絕對值加總：29 個細項各自修正率取絕對值後相加。
 
-    標的2 與標的3 打平在 19.75%，作業手冊 p.57 沒有規定打平怎麼處理，
-    所以權重是暫定值。這裡只驗加總本身。
+    這不是表4 那一格。表4 的「調整百分率絕對值加總」是
+    |交易日期調整| ＋ |區域因素總修正數| ＋ Σ|個別因素各項|，定義不同，
+    見 fixtures 的 table4_abs_sum_note。
     """
     grades = _grades()
     got = sum(
@@ -183,7 +184,7 @@ def test_abs_sum_matches_verified_value(seg):
         for fid in RS.factor_ids
         if fid not in SKIP_SUBTOTAL
     )
-    assert got == EXPECTED_ABS_SUM[seg]
+    assert got == EXPECTED_REGIONAL_ABS_SUM[seg]
 
 
 @pytest.mark.parametrize("seg", COMPARABLES)
