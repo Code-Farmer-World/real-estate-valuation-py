@@ -37,6 +37,20 @@ python -m xlsxform.topdf --out ../交付        # xlsx 轉 PDF
 十項自我驗證、轉 PDF 與活版公式驗算、前端測試與 build。
 任何一項失敗就中止並回非零。錄影片或交接前跑這一支就夠。
 
+## Demo（錄影片與現場說明）
+
+稿在 `docs/DEMO.md`，每條特色都附驗證指令。兩支現場跑的腳本：
+
+```bash
+./scripts/verify-all.sh          # 七步驗收，約兩分半
+python scripts/demo-review.py    # 審查模式：改壞兩格，算出每平方米價差
+```
+
+`demo-review.py` 是照命題文件的定位設計的（題目叫「AI 輔助不動產估價
+案件審查」）。三段：原範本逐格相符 77 格、改壞兩格抓到 4 處不符並算出
+每平方米差 9,422 元、換規則集結果就變（規則是資料不是程式碼）。
+改的是辨識後記憶體裡的 dict，原始 PDF 不動。
+
 ## 已完成
 
 - 表5-1：116 格優劣等級、87 格修正百分比、24 格群組小計、3 格總修正數
@@ -81,7 +95,7 @@ python -m xlsxform.topdf --out ../交付        # xlsx 轉 PDF
 
 ```bash
 export VALUATION_DOC_DIR="$(cd ../docs/official/real-estate-valuation && pwd)"
-.venv/bin/python -m pytest -q -p no:warnings      # 361 passed
+.venv/bin/python -m pytest -q -p no:warnings      # 362 passed
 ```
 
 官方 xlsx 範本與題目 PDF 在 `../正式題目/`。API 用 `VALUATION_TEMPLATE_DIR` 覆寫。

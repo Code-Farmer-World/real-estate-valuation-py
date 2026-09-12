@@ -245,3 +245,46 @@ def test_no_internal_tokens_leak_into_the_delivered_files(built):
     assert not found, "交付檔案出現不該有的字串：" + "；".join(
         f"{k} 的 {t}!{c} 含 {tok!r}（{s}）" for k, t, c, tok, s in found
     )
+
+
+def test_demo_review_script_runs(tmp_path):
+    """`scripts/demo-review.py` 要跑得完。
+
+    那支是 Demo 用的，錄影片現場跑。它會解析官方範本、審查一次、
+    改壞兩格再審一次、換規則集再審一次。任何一段掛掉都會在鏡頭前掛掉，
+    所以放進測試。
+
+    找不到官方範本（不在版控裡）就跳過。
+    """
+    import subprocess
+    import sys
+
+    import paths
+
+    if not (paths.DOC_DIR / "查估書表範本.pdf").exists():
+        pytest.skip("找不到官方查估書表範本，見 docs/README.md")
+
+    root = Path(__file__).resolve().parent.parent.parent
+    proc = subprocess.run(
+        [sys.executable, "-W", "ignore", "scripts/demo-review.py"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    assert proc.returncode == 0, f"stdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+
+    out = proc.stdout
+    # 第一段：原封不動應該逐格相符
+    assert "逐格相符" in out
+    # 第二段：改壞之後要抓到，而且要算出每平方米價差
+    assert "有不符" in out
+
+    # 只看第二段。第三段是換規則集，那一段的價差本來就是 0
+    # （換的是區域因素規則集，而金山案的價格由個別因素決定）。
+    second = out.split("二、改壞兩格")[1].split("三、同一份輸入")[0]
+    assert "每平方米差" in second
+    assert "每平方米差 +0 元" not in second, (
+        "改壞了修正率但價差是 0，Demo 最關鍵那句話會沒有數字。"
+        f"第二段輸出：\n{second}"
+    )
