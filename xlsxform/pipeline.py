@@ -279,12 +279,24 @@ def _delivery_numbers(computed: dict) -> str:
     return "\n".join(lines)
 
 
-def write_delivery_note(out_dir: Path, facts: dict, computed: dict, report: Any) -> Path:
+def write_delivery_note(
+    out_dir: Path,
+    facts: dict,
+    computed: dict,
+    report: Any,
+    *,
+    facts_source: str | None = None,
+) -> Path:
     """在產出目錄放一份說明，讓交付物自己講得清楚。
 
-    收件的人拿到六個檔案，光看檔名分不出該用哪一份，也看不出
+    收件的人拿到七個檔案，光看檔名分不出該用哪一份，也看不出
     「個別因素以 0 計」這個前提。那個前提有寫在表4 的全案備註欄裡，
     但那是一格窄長的合併格，很容易被忽略。
+
+    `facts_source` 給了就用它，沒給才用 `facts["_read_from"]`。
+    API 走的是上傳到暫存目錄的路徑（`/var/folders/.../survey.xlsx`），
+    那種路徑對收件人沒有意義，而且不該把伺服器的目錄結構寫進交付文件，
+    所以 API 端傳的是上傳時的原始檔名。
     """
     from datetime import datetime
 
@@ -293,7 +305,7 @@ def write_delivery_note(out_dir: Path, facts: dict, computed: dict, report: Any)
         case_id=facts["case_id"],
         produced_at=datetime.now().strftime("%Y-%m-%d %H:%M"),
         ruleset_id=computed["table5_1"].ruleset_id,
-        facts_source=facts.get("_read_from") or "案件設定 JSON",
+        facts_source=facts_source or facts.get("_read_from") or "案件設定 JSON",
         segments="、".join([facts["benchmark"]] + list(facts["comparables"])),
         t3=OUTPUT_STEM["table3"],
         t5=OUTPUT_STEM["table5"],

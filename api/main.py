@@ -396,7 +396,16 @@ async def compute_from_survey_xlsx(file: UploadFile = File(...)) -> dict[str, An
         produced = _write_all_forms(facts, computed, work)
         report, report_path = _verify(facts, computed, work)
         produced.append(report_path)
-        produced.append(write_delivery_note(work, facts, computed, report))
+        produced.append(
+            write_delivery_note(
+                work,
+                facts,
+                computed,
+                report,
+                # 不要把暫存目錄的路徑寫進交付文件
+                facts_source="上傳的勘查表：%s" % (file.filename or "survey.xlsx"),
+            )
+        )
     except (ValueError, KeyError, LookupError) as e:
         shutil.rmtree(work, ignore_errors=True)
         raise HTTPException(400, "%s：%s" % (type(e).__name__, e)) from None

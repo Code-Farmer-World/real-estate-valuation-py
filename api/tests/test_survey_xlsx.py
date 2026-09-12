@@ -218,6 +218,10 @@ def test_delivery_note_states_the_premises_and_which_file_to_submit(client, resu
     assert r.headers["content-type"].startswith("text/plain")
     text = r.content.decode("utf-8")
 
+    # 來源寫上傳的檔名，不寫伺服器的暫存路徑
+    assert "上傳的勘查表" in text
+    assert "/var/folders" not in text and "/tmp/" not in text
+
     # 該用哪一份
     assert "交件用這一份" in text
     assert "-final.xlsx" in text and "-live.xlsx" in text
