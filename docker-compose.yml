@@ -27,5 +27,5 @@ services:
     volumes:
       # 唯讀：這兩份是證據，服務不該寫得到它們。
       - ${VALUATION_DOC_DIR_HOST:-./docs/official/real-estate-valuation}:/data/docs:ro
-      - ${VALUATION_TEMPLATE_DIR_HOST:-../正式題目}:/data/templates:ro
+      - ${VALUATION_TEMPLATE_DIR_HOST:-./assets/templates}:/data/templates:ro
     restart: unless-stopped

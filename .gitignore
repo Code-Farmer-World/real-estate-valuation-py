@@ -49,3 +49,8 @@ docs/DEMO.md
 
 # 本機跑整合測試用的產出物（e2e/integration.spec.ts 的 SURVEY_XLSX 預設位置）
 tmp/
+
+# 例外：三份空白 xlsx 範本進版控（共 0.5MB，不是那 103MB 的官方文件）。
+# 部署機沒有「正式題目」目錄，compose 預設改掛這裡，見 docker-compose.yml。
+# 官方當天換檔時，用 VALUATION_TEMPLATE_DIR_HOST 覆寫即可。
+!assets/templates/*.xlsx

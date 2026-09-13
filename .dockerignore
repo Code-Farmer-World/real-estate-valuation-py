@@ -43,3 +43,6 @@ docker-compose.yml
 # 競賽規範要求 repo 根目錄必須有 /.kiro 且不得列入 .gitignore；
 # 它是 specs / hooks / steering 的展示，服務執行期用不到。
 .kiro/
+
+# 例外：三份空白 xlsx 範本（見 .gitignore 同名例外）。
+!assets/templates/*.xlsx
