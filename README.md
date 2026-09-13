@@ -76,6 +76,34 @@ python -m venv .venv
 
 `kernel/` 不需要任何套件就能跑；`requirements.txt` 裡的都是 `parser/` 與 `api/` 用的。
 
+### 或者：用 Docker
+
+```sh
+docker compose up --build          # http://localhost:8000/docs
+```
+
+不必裝 Python 與字型。官方 PDF 與 xlsx 範本**不進 image**——那些檔案不在版控裡、
+比賽當天還會換檔，所以走掛載，換檔不用重 build。預設掛載位置與 `paths.py` 一致
+（`./docs/official/real-estate-valuation` 與 `../正式題目`），檔案在別處時放一份
+`.env` 覆寫：
+
+```sh
+VALUATION_DOC_DIR_HOST=/path/to/docs/official/real-estate-valuation
+VALUATION_TEMPLATE_DIR_HOST=/path/to/正式題目
+```
+
+掛載來源不存在時服務照樣起得來，只有 `/api/forms` 與 `/api/survey/xlsx`
+會回可讀的錯誤。改完程式碼就再跑一次 `up --build`，套件那層有快取、只重跑
+`COPY`，幾秒的事。要在容器裡跑測試：
+
+```sh
+docker compose run --rm api python -m pytest
+```
+
+產表用的標楷體（`pdfform/render.py` 在 Linux 只找 `arphic/ukai.ttc`）由 image
+裝好，build 當下就驗檔案在不在——沒字型會產出一片空白的書表，
+那種錯誤不該留到 demo 現場才發現。
+
 ## 啟動
 
 ### 1. 啟動 API

@@ -1,0 +1,31 @@
+# 只有後端。前端是另一個 repo（MoreFoodQ/real-estate-valuation），
+# 各自獨立部署、只透過 HTTP 溝通。
+#
+#   docker compose up --build                     啟動，http://localhost:8000/docs
+#   docker compose run --rm api python -m pytest  在容器裡跑測試
+#
+# 改完程式碼就再跑一次 up --build：套件那層有快取，只重跑 COPY，幾秒的事。
+#
+# 官方 PDF 與 xlsx 範本不在版控裡，用掛載帶進來。預設位置與 paths.py 一致；
+# 檔案放在別處時，在專案根目錄放一份 .env（已被 .gitignore 排除）覆寫：
+#
+#   VALUATION_DOC_DIR_HOST=/path/to/docs/official/real-estate-valuation
+#   VALUATION_TEMPLATE_DIR_HOST=/path/to/正式題目
+#
+# ⚠️ 掛載來源不存在時 Docker 會自己建一個空目錄。這時服務仍然起得來，
+#    /api/health、/api/parse、/api/compute、/api/review 都正常，
+#    只有 /api/forms（缺「查估書表範本.pdf」）與 /api/survey/xlsx（缺 xlsx 範本）
+#    會回可讀的錯誤，不是靜默失敗。
+
+services:
+  api:
+    build: .
+    image: real-estate-valuation-py:latest
+    ports:
+      # 埠被占用時用 API_PORT 換外部埠，容器內固定 8000。
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      # 唯讀：這兩份是證據，服務不該寫得到它們。
+      - ${VALUATION_DOC_DIR_HOST:-./docs/official/real-estate-valuation}:/data/docs:ro
+      - ${VALUATION_TEMPLATE_DIR_HOST:-../正式題目}:/data/templates:ro
+    restart: unless-stopped
