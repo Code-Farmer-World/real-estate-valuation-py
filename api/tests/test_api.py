@@ -339,53 +339,58 @@ def test_form_download_rejects_unknown_filename(client):
 def _preflight(c, origin):
     return c.options(
         "/api/parse",
-        headers={
-            "Origin": origin,
-            "Access-Control-Request-Method": "POST",
-        },
+        headers={"Origin": origin, "Access-Control-Request-Method": "POST"},
     )
 
 
-def test_cors_allows_localhost_on_any_port(client):
-    """vite 遇到埠被占用會自動往上找，所以埠號不能寫死。"""
-    for origin in ("http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:4173"):
-        r = _preflight(client, origin)
-        assert r.headers.get("access-control-allow-origin") == origin, origin
+def test_cors_is_open_by_default(client):
+    """預設全開。存取控制在 Cloudflare 與 Security Group，不靠 CORS。
+
+    這條盯的是「沒設環境變數時不會變成一個都不放行」——空字串或沒設都要
+    回到 `*`，否則部署上去是整個前端連不上。
+    """
+    for origin in ("http://localhost:5173", "https://demo.example.com", "http://12.34.56.78"):
+        assert _preflight(client, origin).headers.get("access-control-allow-origin") == "*", origin
 
 
-def test_cors_rejects_unlisted_origin_by_default(client):
-    """沒設環境變數時只有本機來源過得去，不是全開。"""
-    r = _preflight(client, "http://12.34.56.78")
-    assert "access-control-allow-origin" not in r.headers
+def test_cors_can_be_narrowed_by_env(monkeypatch):
+    """要收窄時 `VALUATION_ALLOWED_ORIGINS` 要真的接到 middleware 上。
 
-
-def test_cors_allows_origins_from_env(monkeypatch):
-    """環境變數要真的接到 middleware 上。
-
-    這條測的是那條線本身：`VALUATION_ALLOWED_ORIGINS` 在 import 當下讀取，
-    所以得 reload 才驗得到，不能只驗字串切割。部署到 EC2 就是靠這個放行。
+    變數在 import 當下讀取，所以得 reload 才驗得到，不能只驗字串切割——
+    會在部署當天壞掉的正是「環境變數設了但沒生效」那一段。
     """
     import importlib
 
     import api.main
 
-    monkeypatch.setenv("VALUATION_ALLOWED_ORIGINS", "http://12.34.56.78, https://demo.example.com")
+    monkeypatch.setenv("VALUATION_ALLOWED_ORIGINS", "https://demo.example.com, http://12.34.56.78")
     try:
-        reloaded = importlib.reload(api.main)
-        c = TestClient(reloaded.app)
+        c = TestClient(importlib.reload(api.main).app)
 
-        for origin in ("http://12.34.56.78", "https://demo.example.com"):
-            r = _preflight(c, origin)
-            assert r.headers.get("access-control-allow-origin") == origin, origin
+        for origin in ("https://demo.example.com", "http://12.34.56.78"):
+            assert _preflight(c, origin).headers.get("access-control-allow-origin") == origin
 
-        # 本機那條仍然有效，兩者是並存不是取代
-        assert _preflight(c, "http://localhost:5173").headers.get(
-            "access-control-allow-origin"
-        ) == "http://localhost:5173"
+        # 收窄之後本機開發仍然過得去，且埠號不寫死（vite 遇到埠被占用會往上找）
+        for origin in ("http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:4173"):
+            assert _preflight(c, origin).headers.get("access-control-allow-origin") == origin
 
-        # 沒列到的仍然擋掉
+        # 沒列到的擋掉，確認收窄是真的有收
         assert "access-control-allow-origin" not in _preflight(c, "http://evil.example").headers
     finally:
-        # 還原模組狀態，避免污染同一個 session 的其他測試
+        monkeypatch.delenv("VALUATION_ALLOWED_ORIGINS", raising=False)
+        importlib.reload(api.main)
+
+
+def test_cors_empty_env_falls_back_to_open(monkeypatch):
+    """compose 在變數沒給時帶進來的是空字串，那要視同未設。"""
+    import importlib
+
+    import api.main
+
+    monkeypatch.setenv("VALUATION_ALLOWED_ORIGINS", "")
+    try:
+        c = TestClient(importlib.reload(api.main).app)
+        assert _preflight(c, "https://anything.example").headers["access-control-allow-origin"] == "*"
+    finally:
         monkeypatch.delenv("VALUATION_ALLOWED_ORIGINS", raising=False)
         importlib.reload(api.main)

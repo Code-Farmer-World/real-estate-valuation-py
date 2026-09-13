@@ -12,9 +12,9 @@
 #   VALUATION_DOC_DIR_HOST=/path/to/docs/official/real-estate-valuation
 #   VALUATION_TEMPLATE_DIR_HOST=/path/to/正式題目
 #
-# 部署到 EC2 時前端來源也放這裡，否則瀏覽器會擋在 CORS preflight：
+# CORS 預設全部放行，不必設。要收窄成明確來源時也放這裡：
 #
-#   VALUATION_ALLOWED_ORIGINS=http://12.34.56.78
+#   VALUATION_ALLOWED_ORIGINS=https://demo.example.com
 #
 # ⚠️ 掛載來源不存在時 Docker 會自己建一個空目錄。這時服務仍然起得來，
 #    /api/health、/api/parse、/api/compute、/api/review 都正常，
@@ -29,10 +29,10 @@ services:
       # 埠被占用時用 API_PORT 換外部埠，容器內固定 8000。
       - "${API_PORT:-8000}:8000"
     environment:
-      # 部署到 EC2 時前端與後端不同源，要在這裡列出前端來源，
-      # 否則瀏覽器擋在 preflight，前端只會看到沒有原因的網路錯誤。
-      # 逗號分隔，填 * 是全部放行。本機開發的 localhost:任意埠 一律放行，不必設。
-      - VALUATION_ALLOWED_ORIGINS=${VALUATION_ALLOWED_ORIGINS:-}
+      # CORS 預設全部放行：存取控制在 Cloudflare 與 Security Group 那兩層，
+      # 不靠 CORS（本 API 不做認證、前端也沒有 withCredentials）。
+      # 要收窄時在 .env 列明確來源，逗號分隔。
+      - VALUATION_ALLOWED_ORIGINS=${VALUATION_ALLOWED_ORIGINS:-*}
     volumes:
       # 唯讀：這兩份是證據，服務不該寫得到它們。
       - ${VALUATION_DOC_DIR_HOST:-./docs/official/real-estate-valuation}:/data/docs:ro

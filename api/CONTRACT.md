@@ -204,28 +204,30 @@ body 是 `/api/parse` 回傳的 `tables` 加上規則集選擇。
 
 ## 四、CORS
 
-兩條來源同時生效：**本機開發固定放行**，**部署環境的來源由環境變數給**。
+**預設全部放行。**
 
 ```
-allow_origins       = VALUATION_ALLOWED_ORIGINS 逗號分隔（預設空）
+allow_origins       = VALUATION_ALLOWED_ORIGINS 逗號分隔（預設 "*"）
 allow_origin_regex  = r"http://(localhost|127\.0\.0\.1):\d+"
 allow_methods       = ["GET", "POST"]
 allow_headers       = ["*"]
 ```
 
-本機那條的埠號用 regex 不寫死 5173：vite 遇到埠被占用會自動往上找
-（實測掉到 5174），這時整個前端突然連不上，而錯誤訊息完全看不出是 CORS。
+存取控制在 Cloudflare 與 Security Group 那兩層，不靠 CORS。CORS 管的是
+「別的網站的 JS 讀不讀得到這個 API 的回應」，而本 API 不做認證、前端也沒有
+`withCredentials`，沒有 cookie 會跟著跑（見第五節），回應裡沒有只有特定來源
+才能看的東西。另外 `*` 是固定值、不隨 Origin 變動，前面那層 CDN 快取到它也
+不會跨來源污染——列白名單反而要擔心這件事。
 
-部署時前端與後端不同源（不同埠或不同網域），上面那條 regex 認不出來，
-瀏覽器會擋在 preflight，所以要另外給：
+要收窄就列明確來源：
 
 ```sh
-VALUATION_ALLOWED_ORIGINS=http://12.34.56.78,https://demo.example.com
+VALUATION_ALLOWED_ORIGINS=https://demo.example.com
 ```
 
-填 `*` 是全部放行。本 API 不做認證、前端也沒有 `withCredentials`，
-不會有 cookie 跟著跑（見第五節），所以 `*` 在這個專案是可接受的收尾手段。
-前後端由同一個 nginx 以同源提供時不會觸發 CORS，不必設這個。
+收窄之後本機開發仍由那條 regex 放行，不必列進去。埠號用 regex 不寫死 5173：
+vite 遇到埠被占用會自動往上找（實測掉到 5174），這時整個前端突然連不上，
+而錯誤訊息完全看不出是 CORS。
 
 前端攔截器對「請求已發出但沒收到回應」只會記成網路錯誤，
 CORS 沒開會表現成看不出原因的失敗，所以這條要先設好。

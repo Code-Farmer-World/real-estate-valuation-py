@@ -65,25 +65,31 @@ app = FastAPI(title="不動產估價案件審查 API", version="0.1.0")
 # 前端攔截器把「請求已發出但沒收到回應」一律記成網路錯誤，
 # CORS 沒開會表現成看不出原因的失敗，所以這條要先設對。
 
-#: 部署環境的前端來源，逗號分隔：
+#: CORS 放行的來源，逗號分隔。**預設 `*`（全部放行）。**
 #:
-#:     VALUATION_ALLOWED_ORIGINS=http://12.34.56.78,https://demo.example.com
+#: 存取控制在 Cloudflare 與 Security Group 那兩層，不靠 CORS。CORS 擋的是
+#: 「別的網站的 JS 讀不讀得到這個 API 的回應」，而本 API 不做認證、前端也沒有
+#: withCredentials，沒有 cookie 會跟著跑，回應裡沒有只有特定來源才能看的東西
+#: （見 CONTRACT.md 第五節）。另外 `*` 是固定值、不隨 Origin 變動，前面那層
+#: CDN 快取到它也不會跨來源污染——列白名單反而要擔心這件事。
 #:
-#: 單機 EC2 上前端與後端不同源（不同埠或不同網域），下面那條本機開發用的
-#: regex 認不出來，瀏覽器會擋在 preflight，而前端只會看到一個沒有原因的
-#: 網路錯誤。填 `*` 是全部放行——本 API 不做認證，前端也沒有 withCredentials，
-#: 不會有 cookie 跟著跑（見 CONTRACT.md 第五節）。
-#: 前後端由同一個 nginx 以同源提供時不會觸發 CORS，這個不必設。
+#: 要收窄就列明確來源（本機 localhost 由下面那條 regex 另外放行，不必列）：
+#:
+#:     VALUATION_ALLOWED_ORIGINS=https://demo.example.com
+#:
+#: 空字串視同未設：compose 在變數沒給時帶進來的就是空字串，
+#: 那種情況要回到預設全開，不能變成一個都不放行。
 ALLOWED_ORIGINS = [
-    o.strip() for o in os.environ.get("VALUATION_ALLOWED_ORIGINS", "").split(",") if o.strip()
-]
+    o.strip() for o in os.environ.get("VALUATION_ALLOWED_ORIGINS", "*").split(",") if o.strip()
+] or ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    # 本機開發固定放行，且埠號用 regex 不寫死 5173：vite 遇到埠被占用會自動
-    # 往上找（實測掉到 5174），這時寫死的白名單會讓整個前端突然連不上，
-    # 而錯誤訊息完全看不出是 CORS。
+    # 收窄成明確清單時，本機開發仍然固定放行，且埠號用 regex 不寫死 5173：
+    # vite 遇到埠被占用會自動往上找（實測掉到 5174），這時寫死的白名單會讓
+    # 整個前端突然連不上，而錯誤訊息完全看不出是 CORS。
+    # ALLOWED_ORIGINS 是預設的 ["*"] 時這條不影響結果。
     allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_methods=["GET", "POST"],
     allow_headers=["*"],

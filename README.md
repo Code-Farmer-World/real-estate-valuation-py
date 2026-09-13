@@ -92,15 +92,12 @@ VALUATION_DOC_DIR_HOST=/path/to/docs/official/real-estate-valuation
 VALUATION_TEMPLATE_DIR_HOST=/path/to/正式題目
 ```
 
-部署到單機（主辦提供的 EC2）時前端與後端不同源，前端來源也放進同一份 `.env`，
-否則瀏覽器會擋在 CORS preflight，而前端只會看到一個沒有原因的網路錯誤：
+CORS **預設全部放行**，部署時不必設——存取控制在 Cloudflare 與 Security Group
+那兩層，本 API 不做認證也沒有 cookie。要收窄成明確來源時放進同一份 `.env`：
 
 ```sh
-VALUATION_ALLOWED_ORIGINS=http://<EC2-IP>      # 逗號分隔多筆；填 * 是全部放行
+VALUATION_ALLOWED_ORIGINS=https://demo.example.com    # 逗號分隔多筆
 ```
-
-本機開發的 `localhost:任意埠` 一律放行，不必設這個；前後端由同一個 nginx
-以同源提供時也不必設。
 
 掛載來源不存在時服務照樣起得來，只有 `/api/forms` 與 `/api/survey/xlsx`
 會回可讀的錯誤。改完程式碼就再跑一次 `up --build`，套件那層有快取、只重跑
