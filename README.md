@@ -92,6 +92,16 @@ VALUATION_DOC_DIR_HOST=/path/to/docs/official/real-estate-valuation
 VALUATION_TEMPLATE_DIR_HOST=/path/to/正式題目
 ```
 
+部署到單機（主辦提供的 EC2）時前端與後端不同源，前端來源也放進同一份 `.env`，
+否則瀏覽器會擋在 CORS preflight，而前端只會看到一個沒有原因的網路錯誤：
+
+```sh
+VALUATION_ALLOWED_ORIGINS=http://<EC2-IP>      # 逗號分隔多筆；填 * 是全部放行
+```
+
+本機開發的 `localhost:任意埠` 一律放行，不必設這個；前後端由同一個 nginx
+以同源提供時也不必設。
+
 掛載來源不存在時服務照樣起得來，只有 `/api/forms` 與 `/api/survey/xlsx`
 會回可讀的錯誤。改完程式碼就再跑一次 `up --build`，套件那層有快取、只重跑
 `COPY`，幾秒的事。要在容器裡跑測試：

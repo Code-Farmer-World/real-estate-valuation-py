@@ -12,6 +12,7 @@ demo 的主論述是「每個數字都能指回官方文件」，一旦 API 層�
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import tempfile
 import uuid
@@ -63,12 +64,26 @@ app = FastAPI(title="不動產估價案件審查 API", version="0.1.0")
 
 # 前端攔截器把「請求已發出但沒收到回應」一律記成網路錯誤，
 # CORS 沒開會表現成看不出原因的失敗，所以這條要先設對。
-#
-# 用 regex 而不是寫死 5173：vite 遇到埠被占用會自動往上找（實測掉到 5174），
-# 這時寫死的白名單會讓整個前端突然連不上，而錯誤訊息完全看不出是 CORS。
-# 這是開發用設定；上線要換成明確的來源清單。
+
+#: 部署環境的前端來源，逗號分隔：
+#:
+#:     VALUATION_ALLOWED_ORIGINS=http://12.34.56.78,https://demo.example.com
+#:
+#: 單機 EC2 上前端與後端不同源（不同埠或不同網域），下面那條本機開發用的
+#: regex 認不出來，瀏覽器會擋在 preflight，而前端只會看到一個沒有原因的
+#: 網路錯誤。填 `*` 是全部放行——本 API 不做認證，前端也沒有 withCredentials，
+#: 不會有 cookie 跟著跑（見 CONTRACT.md 第五節）。
+#: 前後端由同一個 nginx 以同源提供時不會觸發 CORS，這個不必設。
+ALLOWED_ORIGINS = [
+    o.strip() for o in os.environ.get("VALUATION_ALLOWED_ORIGINS", "").split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    # 本機開發固定放行，且埠號用 regex 不寫死 5173：vite 遇到埠被占用會自動
+    # 往上找（實測掉到 5174），這時寫死的白名單會讓整個前端突然連不上，
+    # 而錯誤訊息完全看不出是 CORS。
     allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_methods=["GET", "POST"],
     allow_headers=["*"],

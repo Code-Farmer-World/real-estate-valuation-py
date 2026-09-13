@@ -327,3 +327,65 @@ def test_form_download_rejects_unknown_filename(client):
     """下載端點只認得我們自己產出的那三個檔名，擋掉路徑穿越。"""
     r = client.get("/api/forms/deadbeef/../../etc/passwd")
     assert r.status_code in (400, 404)
+
+
+# ---------- CORS ----------
+#
+# CORS 設錯在畫面上是「沒有原因的網路錯誤」——前端攔截器對「請求已發出但
+# 沒收到回應」一律記成網路錯誤，看不出是被瀏覽器擋在 preflight。
+# 部署當天沒有時間從那個症狀回推原因，所以在這裡綁住。
+
+
+def _preflight(c, origin):
+    return c.options(
+        "/api/parse",
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+
+def test_cors_allows_localhost_on_any_port(client):
+    """vite 遇到埠被占用會自動往上找，所以埠號不能寫死。"""
+    for origin in ("http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:4173"):
+        r = _preflight(client, origin)
+        assert r.headers.get("access-control-allow-origin") == origin, origin
+
+
+def test_cors_rejects_unlisted_origin_by_default(client):
+    """沒設環境變數時只有本機來源過得去，不是全開。"""
+    r = _preflight(client, "http://12.34.56.78")
+    assert "access-control-allow-origin" not in r.headers
+
+
+def test_cors_allows_origins_from_env(monkeypatch):
+    """環境變數要真的接到 middleware 上。
+
+    這條測的是那條線本身：`VALUATION_ALLOWED_ORIGINS` 在 import 當下讀取，
+    所以得 reload 才驗得到，不能只驗字串切割。部署到 EC2 就是靠這個放行。
+    """
+    import importlib
+
+    import api.main
+
+    monkeypatch.setenv("VALUATION_ALLOWED_ORIGINS", "http://12.34.56.78, https://demo.example.com")
+    try:
+        reloaded = importlib.reload(api.main)
+        c = TestClient(reloaded.app)
+
+        for origin in ("http://12.34.56.78", "https://demo.example.com"):
+            r = _preflight(c, origin)
+            assert r.headers.get("access-control-allow-origin") == origin, origin
+
+        # 本機那條仍然有效，兩者是並存不是取代
+        assert _preflight(c, "http://localhost:5173").headers.get(
+            "access-control-allow-origin"
+        ) == "http://localhost:5173"
+
+        # 沒列到的仍然擋掉
+        assert "access-control-allow-origin" not in _preflight(c, "http://evil.example").headers
+    finally:
+        # 還原模組狀態，避免污染同一個 session 的其他測試
+        monkeypatch.delenv("VALUATION_ALLOWED_ORIGINS", raising=False)
+        importlib.reload(api.main)
