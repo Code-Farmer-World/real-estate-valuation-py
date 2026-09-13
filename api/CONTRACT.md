@@ -204,16 +204,30 @@ body 是 `/api/parse` 回傳的 `tables` 加上規則集選擇。
 
 ## 四、CORS
 
-只開本機來源，但**埠號用 regex 不寫死**：
+**預設全部放行。**
 
 ```
-allow_origin_regex = r"http://(localhost|127\.0\.0\.1):\d+"
-allow_methods = ["GET", "POST"]
-allow_headers = ["*"]
+allow_origins       = VALUATION_ALLOWED_ORIGINS 逗號分隔（預設 "*"）
+allow_origin_regex  = r"http://(localhost|127\.0\.0\.1):\d+"
+allow_methods       = ["GET", "POST"]
+allow_headers       = ["*"]
 ```
 
-寫死 5173 踩過一次：vite 遇到埠被占用會自動往上找（實測掉到 5174），
-這時整個前端突然連不上，而錯誤訊息完全看不出是 CORS。上線要換成明確的來源清單。
+存取控制在 Cloudflare 與 Security Group 那兩層，不靠 CORS。CORS 管的是
+「別的網站的 JS 讀不讀得到這個 API 的回應」，而本 API 不做認證、前端也沒有
+`withCredentials`，沒有 cookie 會跟著跑（見第五節），回應裡沒有只有特定來源
+才能看的東西。另外 `*` 是固定值、不隨 Origin 變動，前面那層 CDN 快取到它也
+不會跨來源污染——列白名單反而要擔心這件事。
+
+要收窄就列明確來源：
+
+```sh
+VALUATION_ALLOWED_ORIGINS=https://demo.example.com
+```
+
+收窄之後本機開發仍由那條 regex 放行，不必列進去。埠號用 regex 不寫死 5173：
+vite 遇到埠被占用會自動往上找（實測掉到 5174），這時整個前端突然連不上，
+而錯誤訊息完全看不出是 CORS。
 
 前端攔截器對「請求已發出但沒收到回應」只會記成網路錯誤，
 CORS 沒開會表現成看不出原因的失敗，所以這條要先設好。

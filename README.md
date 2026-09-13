@@ -92,6 +92,13 @@ VALUATION_DOC_DIR_HOST=/path/to/docs/official/real-estate-valuation
 VALUATION_TEMPLATE_DIR_HOST=/path/to/正式題目
 ```
 
+CORS **預設全部放行**，部署時不必設——存取控制在 Cloudflare 與 Security Group
+那兩層，本 API 不做認證也沒有 cookie。要收窄成明確來源時放進同一份 `.env`：
+
+```sh
+VALUATION_ALLOWED_ORIGINS=https://demo.example.com    # 逗號分隔多筆
+```
+
 掛載來源不存在時服務照樣起得來，只有 `/api/forms` 與 `/api/survey/xlsx`
 會回可讀的錯誤。改完程式碼就再跑一次 `up --build`，套件那層有快取、只重跑
 `COPY`，幾秒的事。要在容器裡跑測試：

@@ -327,3 +327,70 @@ def test_form_download_rejects_unknown_filename(client):
     """下載端點只認得我們自己產出的那三個檔名，擋掉路徑穿越。"""
     r = client.get("/api/forms/deadbeef/../../etc/passwd")
     assert r.status_code in (400, 404)
+
+
+# ---------- CORS ----------
+#
+# CORS 設錯在畫面上是「沒有原因的網路錯誤」——前端攔截器對「請求已發出但
+# 沒收到回應」一律記成網路錯誤，看不出是被瀏覽器擋在 preflight。
+# 部署當天沒有時間從那個症狀回推原因，所以在這裡綁住。
+
+
+def _preflight(c, origin):
+    return c.options(
+        "/api/parse",
+        headers={"Origin": origin, "Access-Control-Request-Method": "POST"},
+    )
+
+
+def test_cors_is_open_by_default(client):
+    """預設全開。存取控制在 Cloudflare 與 Security Group，不靠 CORS。
+
+    這條盯的是「沒設環境變數時不會變成一個都不放行」——空字串或沒設都要
+    回到 `*`，否則部署上去是整個前端連不上。
+    """
+    for origin in ("http://localhost:5173", "https://demo.example.com", "http://12.34.56.78"):
+        assert _preflight(client, origin).headers.get("access-control-allow-origin") == "*", origin
+
+
+def test_cors_can_be_narrowed_by_env(monkeypatch):
+    """要收窄時 `VALUATION_ALLOWED_ORIGINS` 要真的接到 middleware 上。
+
+    變數在 import 當下讀取，所以得 reload 才驗得到，不能只驗字串切割——
+    會在部署當天壞掉的正是「環境變數設了但沒生效」那一段。
+    """
+    import importlib
+
+    import api.main
+
+    monkeypatch.setenv("VALUATION_ALLOWED_ORIGINS", "https://demo.example.com, http://12.34.56.78")
+    try:
+        c = TestClient(importlib.reload(api.main).app)
+
+        for origin in ("https://demo.example.com", "http://12.34.56.78"):
+            assert _preflight(c, origin).headers.get("access-control-allow-origin") == origin
+
+        # 收窄之後本機開發仍然過得去，且埠號不寫死（vite 遇到埠被占用會往上找）
+        for origin in ("http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:4173"):
+            assert _preflight(c, origin).headers.get("access-control-allow-origin") == origin
+
+        # 沒列到的擋掉，確認收窄是真的有收
+        assert "access-control-allow-origin" not in _preflight(c, "http://evil.example").headers
+    finally:
+        monkeypatch.delenv("VALUATION_ALLOWED_ORIGINS", raising=False)
+        importlib.reload(api.main)
+
+
+def test_cors_empty_env_falls_back_to_open(monkeypatch):
+    """compose 在變數沒給時帶進來的是空字串，那要視同未設。"""
+    import importlib
+
+    import api.main
+
+    monkeypatch.setenv("VALUATION_ALLOWED_ORIGINS", "")
+    try:
+        c = TestClient(importlib.reload(api.main).app)
+        assert _preflight(c, "https://anything.example").headers["access-control-allow-origin"] == "*"
+    finally:
+        monkeypatch.delenv("VALUATION_ALLOWED_ORIGINS", raising=False)
+        importlib.reload(api.main)
