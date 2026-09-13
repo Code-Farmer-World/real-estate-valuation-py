@@ -1,0 +1,45 @@
+# build context 只需要原始碼。這裡排除的東西不是「不重要」，
+# 是「不該進 image」——大檔、機密、本機產物。
+
+# ── 機密資訊（與 .gitignore 同一條原則）────────────────────
+.env
+.env.local
+*.local
+*.local.md
+
+# ── 官方文件與範本：用掛載帶進來，不進 image ──────────────
+# 共約 103MB，且比賽當天會換檔。位置見 paths.py 與 docker-compose.yml。
+docs/official/
+docs/ocr/
+docs/pitch/
+*.pdf
+*.docx
+*.xlsx
+*.pptx
+*.key
+
+# ── 本機環境與快取 ────────────────────────────────────────
+.git/
+.gitignore
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+.idea/
+
+# ── 本機產物 ──────────────────────────────────────────────
+stress/.tmp/
+tmp/
+
+# ── 容器自身的設定檔，進 image 沒有用途 ───────────────────
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# ── .kiro 只排除於 build context，仍留在版控 ──────────────
+# 競賽規範要求 repo 根目錄必須有 /.kiro 且不得列入 .gitignore；
+# 它是 specs / hooks / steering 的展示，服務執行期用不到。
+.kiro/
